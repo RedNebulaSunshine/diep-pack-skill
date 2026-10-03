@@ -5,6 +5,13 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.3.0 (2026-10-03)
+
+- Pulsing light (a user's discovery, issue #1): two star shapes on one spot in two tones of one
+  hue, spinning in opposite directions, read as a lantern, beacon, reactor core or heartbeat with
+  no projectiles. `d.pulse(at, size)` builds it; figurative.md §5 and moves.md §2 describe it,
+  with the beat-rate formula.
+
 ## 1.2.4 (2026-10-03)
 
 - Loads on claude.ai: the description is quoted YAML with no angle brackets, and the Claude

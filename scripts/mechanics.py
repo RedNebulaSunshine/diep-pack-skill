@@ -644,6 +644,22 @@ class Mechanics:
                 r["delay"] = phase
         return parts
 
+    def pulse(self, at=(0, 0), size=20, colors=(16, 8), rate=0.05, spokes=3, above=True,
+              turret=None, name="pulse", **kw):
+        """A light that pulses (lantern, beacon, reactor core, heartbeat) with no projectiles:
+        two star shapes on the same spot in two tones of one hue, spinning in opposite
+        directions. Spokes aligned = one bright star; interleaved = a dimmer, rounder disc.
+        Beat period = (2 pi / spokes) / (2 * rate * 25) s: 3 spokes at 0.05 beat about once a
+        second, 0.12 flickers; 6 spokes beat twice as fast; 4 looks mechanical. colors are
+        (back, front): the back star is drawn 1.2 x size so a rim of the darker tone shows.
+        Costs two shapes, no barrels or stats. Likely (a user's discovery, 2026-10-03)."""
+        back, front = colors
+        pair = [self.shape(spokes, size * 1.2, at, color=back, above=above, star=True, spin=-rate,
+                           turret=turret, name=f"{name} back", **kw),
+                self.shape(spokes, size, at, color=front, above=above, star=True, spin=rate,
+                           turret=turret, name=f"{name} front", **kw)]
+        return pair
+
     # --- Character-pack techniques (a player-built pack, read 2026-09-28) ---------------------------
     # Each preset copies the distinguishing numbers of a pattern that pack uses on many tanks
     # (recipes.md sections 25-32, figurative.md section 5). Tagged High from the data; none has

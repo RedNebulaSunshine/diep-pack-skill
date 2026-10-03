@@ -86,7 +86,7 @@ untested idea (offer it as an experiment and name it as a guess in the recap).
 | **flaps, paddles, pumps, pedals** | parts that pump as it fires or moves | `animate()` (`forceFire` to move without a click) | C |
 | **slithers, streaks, leaves a trail** (snake, comet, slime, footprints) | a body or trail that follows its path | `trail()` | C |
 | **spins** (saw, drill, wheel, propeller, planet) | a part that turns forever | `spinSpeed` on a shape or the hull | C |
-| **glows, sparkles, is magic** | an aura of specks or orbiting motes | a sparkler (auto-firing spinning star specks), uncontrolled orbiting drones | C |
+| **glows, sparkles, is magic** | an aura of specks or orbiting motes; or a light that pulses | a sparkler (auto-firing spinning star specks), uncontrolled orbiting drones; for a pulse with no projectiles, `pulse()`: two counter-rotating star shapes on one spot (figurative.md §5) | C; pulse likely |
 | **sees far** (sniper, lookout, telescope) | a wider view or a scope | `sniper()` zoom, `scope()` | C |
 | **grows up, powers up, transforms** | the story as an upgrade line | a multi-tank line (padawan → knight → master) | C |
 

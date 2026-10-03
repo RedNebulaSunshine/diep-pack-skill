@@ -58,7 +58,7 @@ the request changes; hand-written JSON copies the numbers from the sections.
 | 14 Shotgun / Pellet Shot | `d.shotgun(pellets=4)` | |
 | 15 Firework | `d.firework_launcher(shards=24)` | writes the help text |
 | 16 right click / Predator scope | `right_click=True` on any preset, `d.scope()` | |
-| §5 of figurative.md | `d.animate(rods, phase)`, `d.pendulum(at, angle, arc)` | piston and pendulum motion |
+| §5 of figurative.md | `d.animate(rods, phase)`, `d.pendulum(at, angle, arc)`, `d.pulse(at, size)` | piston and pendulum motion; a pulsing light from two counter-rotating stars |
 | 19 auto-fire | `auto_fire=True` on any gun preset | fires without a click (`flags.forceFire`) |
 | 20 trail / body that follows | `d.trail(seconds, size, sides, taper)`, `stages=[(size, s, sides, color, parts), …]` | stationary bullets dropped behind; stages = one dropper per size, graded taper with decorated segments |
 | 21 bite / contact damage | `d.jaws(...)`, `d.contact_damage(at, damage, turret)` | cursor-following jaws with hot points |
