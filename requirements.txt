@@ -1,0 +1,2 @@
+# Only the PNG renderer needs this; the validator, compose library and SVG output are standard library.
+Pillow>=9.0

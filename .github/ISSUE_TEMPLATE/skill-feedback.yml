@@ -1,0 +1,74 @@
+name: Skill finding or discovery
+description: Something the diep-pack skill got wrong, something the game proved, or a new technique worth teaching it. Usually drafted by the skill itself.
+title: "[finding] "
+labels: ["skill-feedback", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing. Findings (the skill was wrong) and discoveries (a new way of doing
+        something, functional, aesthetic or quality of life) are both welcome. If the skill
+        drafted this for you, the fields below are already filled in: read them, change anything
+        you like, and submit. One finding or discovery per issue. Nothing here is acted on until
+        the maintainer has read it.
+  - type: input
+    id: kind
+    attributes:
+      label: Kind
+      description: "spec, validator, renderer, build-library, missing-move, skill-behaviour, discovery or other"
+      placeholder: spec
+    validations:
+      required: true
+  - type: input
+    id: area
+    attributes:
+      label: Where in the skill
+      description: The file and section the finding is about.
+      placeholder: "references/schema/04-barrels.md §7a; scripts/validate_pack.py"
+  - type: textarea
+    id: believed
+    attributes:
+      label: What the skill says, did or did not know
+      description: Quote the current text, value or behaviour. For a discovery, what the skill did before, or that the references do not cover it.
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened instead, or the new way
+      description: What the game, the editor or the user saw, with numbers where there are any. For a discovery, the technique - what it achieves, how it is built and why it works.
+    validations:
+      required: true
+  - type: textarea
+    id: tested
+    attributes:
+      label: How it was tested
+      description: The steps, and the date. Say if it was seen once or repeated.
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested change
+      description: What to change, in which file and section, as text that could be pasted in.
+  - type: input
+    id: confidence
+    attributes:
+      label: Confidence
+      description: "Confirmed in game, likely, or a guess"
+  - type: textarea
+    id: pack
+    attributes:
+      label: Pack excerpt (optional)
+      description: The smallest part of the pack that shows it (one tank, barrel or projectile). Leave out names you would rather not share.
+      render: json
+  - type: textarea
+    id: context
+    attributes:
+      label: Skill version and agent
+      description: Filled in by the skill.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before you submit
+      options:
+        - label: I have read this issue and it contains nothing I want to keep private.
+          required: true

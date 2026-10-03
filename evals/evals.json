@@ -1,0 +1,195 @@
+{
+  "skill_name": "diep-pack",
+  "notes": "Signature-move evals: plain requests that name only a subject. A good run pitches (or, when told to just build, builds) moves the user never named. Grade the skill's first reply (the one question of SKILL.md section 3) and, for the build-it prompts, the delivered recap and pack. The last prompt is a control: a purely mechanical request must not be buried in pitches. Evals 7-11 name subjects that appear nowhere in the skill: they test that the method generalises instead of matching the worked pitches. Keep them out of moves.md. Evals 13-16 test the arena (custom shapes): 13-15 name themes that appear nowhere in the skill, so keep them out of arena.md; 16 is a mechanical control.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/diep-pack Luke Skywalker",
+      "expected_output": "One question that leads with a signature-move pitch (lightsaber, the Force, a companion) before level, parent and author.",
+      "files": [],
+      "expectations": [
+        "Proposes a lightsaber as a drawn blade that swings (cursor pivot or living limb) and hits along its length (blade hits or collidable parts), not a plain barrel",
+        "Proposes a Force power on right click (a knockback push or a dash/leap)",
+        "Proposes R2-D2 (or another Star Wars character) as a companion drone that follows on its own",
+        "Names which button does each move",
+        "Offers at least one alternative move the user can swap in",
+        "Still asks for level, parent tank and author in the same single message"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/diep-pack a hen",
+      "expected_output": "A pitch built around laying eggs that hatch and chicks that follow.",
+      "files": [],
+      "expectations": [
+        "Proposes eggs that are laid and hatch (egg preset, rolled hatch time or golden eggs)",
+        "Proposes chicks as companion figure drones that follow the hen",
+        "Proposes at least one animated part (a bobbing head on a living limb, flapping wings or a pecking beak)",
+        "Does not propose a plain bullet gun as the main weapon"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/diep-pack Thor. Just build it, surprise me.",
+      "expected_output": "No question beyond what is unavoidable; a built pack whose recap names the moves chosen and offers alternatives.",
+      "files": [],
+      "expectations": [
+        "Builds without asking about moves (the user said to just build it)",
+        "The pack throws a drawn hammer (a projectile with rods or parts), not a plain bullet",
+        "The pack has a right-click power (lightning burst, shockwave or dash)",
+        "The recap names each signature move in plain words with its button",
+        "The recap says the hammer cannot return to him, or offers a melee hammer instead",
+        "The recap ends with one or two alternatives offered",
+        "The pack validates with 0 errors and passes the fire budget"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "/diep-pack a pirate ship",
+      "expected_output": "A pitch with broadside cannons plus at least one move beyond guns.",
+      "files": [],
+      "expectations": [
+        "Proposes cannons on both sides (a broadside)",
+        "Proposes at least one non-gun move: a crew or parrot companion, a wake trail, a keg or mine left behind, or sails and a flag that swing",
+        "Proposes a right-click special distinct from left click"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/diep-pack a toaster",
+      "expected_output": "An object played for fun: toast as the drawn projectile, a lever that pumps, crumbs.",
+      "files": [],
+      "expectations": [
+        "The projectile is drawn as toast (parts or rods), not a plain bullet",
+        "Proposes at least one animated or trailing detail (a pumping lever, crumbs trail, popping)",
+        "The pitch is playful and specific to a toaster"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "/diep-pack an ice tank",
+      "expected_output": "A theme turned into moves (frost spray, placed ice, snowflakes), with honesty that slowing is impossible.",
+      "files": [],
+      "expectations": [
+        "Proposes a frost or ice spray (a short-lived shotgun or machine gun in ice colours)",
+        "Proposes at least one move beyond guns (a placed ice wall or spike, a sparkle aura, spinning snowflakes)",
+        "If freezing or slowing enemies comes up, says the format cannot do it and offers a substitute"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/diep-pack Harry Potter",
+      "expected_output": "A wand that casts, at least one recognisable spell or magical creature, and a Harry Potter detail.",
+      "files": [],
+      "expectations": [
+        "Proposes a wand (a drawn rod, ideally on a cursor pivot or held in a hand) that the spells fire from",
+        "Proposes at least two distinct spells or magical effects on different buttons (e.g. a stunning bolt, a disarming push, a shield)",
+        "Proposes a companion or summon from the books (a patronus, Hedwig, a house-elf) or a broom dash",
+        "Includes at least one visual tell (the scar, glasses, a house scarf, the Snitch)",
+        "Every move is mapped to a real mechanic of the game, and anything impossible is said to be impossible"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "/diep-pack a vacuum cleaner",
+      "expected_output": "An object whose signature (suction) the game cannot do: an honest substitute and playful moves.",
+      "files": [],
+      "expectations": [
+        "Recognises suction as the signature and says the game cannot pull things in",
+        "Offers a substitute for suction (a nozzle that bites what it touches, a shove, a trail of dust)",
+        "Proposes at least one more move from the object (a cord trailing behind, a spinning brush, a bag that bursts)"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "/diep-pack Napoleon",
+      "expected_output": "A historical figure: cannons and an army, a recognisable hat.",
+      "files": [],
+      "expectations": [
+        "Proposes artillery or cannons as a main attack",
+        "Proposes an army, soldiers or cavalry as drones, minions or placed units",
+        "Proposes a visual tell such as the bicorne hat or a coat",
+        "Proposes a right-click move distinct from left click (a cavalry charge dash, a volley, placed artillery)"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "/diep-pack a jellyfish",
+      "expected_output": "A creature: trailing tentacles that sting, drifting motion, glow.",
+      "files": [],
+      "expectations": [
+        "Proposes tentacles that trail or sway (trail, pendulum or living limbs) and sting on contact",
+        "Proposes at least one move beyond a gun (a sting within reach, drifting pulse movement, a glow aura, a burst of spawn)",
+        "Does not reduce the animal to a coloured hull with barrels"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "/diep-pack a chef",
+      "expected_output": "A job: kitchen tools as weapons, food as projectiles, a playful pitch.",
+      "files": [],
+      "expectations": [
+        "Proposes a kitchen tool as a melee or held weapon (a knife, a pan, a cleaver) using blade, punch or a cursor pivot",
+        "Proposes food as a drawn projectile or something that is placed or thrown",
+        "Proposes a chef-specific tell (the hat, a flame, a sous-chef companion)"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "/diep-pack a Sniper variant with two long barrels that fire alternately",
+      "expected_output": "Control: the question asks level, parent and author; no move pitch dominates, at most one optional idea.",
+      "files": [],
+      "expectations": [
+        "Asks for level, parent tank (recommending Sniper) and author",
+        "Does not replace or bury the requested design under creature-style move pitches",
+        "Keeps any extra idea to one optional line"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "/diep-pack arena shapes for a candy land pack",
+      "expected_output": "One question that leads with a pitch of themed shapes, each with a role, look and place on the map, and asks whether the vanilla shapes stay.",
+      "files": [],
+      "expectations": [
+        "Pitches five or more shapes that are recognisably candy (e.g. gumdrops, peppermints, lollipops, gingerbread), not recoloured squares",
+        "Gives the shapes distinct roles: common food, a rarer richer food or prize, at least one hazard or crasher, and a boss or landmark",
+        "Places them in rings from the edge to the centre and says roughly how common each is",
+        "Asks whether to hide the vanilla shapes, and does not ask for a level or parent tank"
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "/diep-pack a zombie apocalypse arena. Just build it.",
+      "expected_output": "A built arena-only pack whose recap tables the shapes with their shares of the spawns.",
+      "files": [],
+      "expectations": [
+        "Builds without asking about the shapes",
+        "Zombies (or the undead) are crashers that hunt the player; supplies or loot are food; there is a rare prize and a boss or horde leader",
+        "Most of the predicted spawns are food; hazards are a modest share and anything with 20+ contact damage is rare",
+        "The recap lists each shape's role, look, band and share of spawns, and says to import with Add to this pack (arena-only)",
+        "The pack validates; values are inside the editor's ranges"
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "/diep-pack a medieval castle tank",
+      "expected_output": "A tank pitch; the arena is offered in one line, not built.",
+      "files": [],
+      "expectations": [
+        "Pitches the tank's signature moves as usual",
+        "Offers matching arena shapes in one line (naming two or three), without building or pitching them at length"
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "/diep-pack add a red crasher that only spawns near the edge of the map, rare, hits hard",
+      "expected_output": "Control: a single mechanical shape built from the request, without a theme pitch.",
+      "files": [],
+      "expectations": [
+        "Builds one custom shape with a chase radius above 0 and a chase speed (a crasher), a red hex colour and a band near the edge (radius_min about 0.8)",
+        "Uses a low weight and high contact damage, and says what 'hits hard' means (20 kills a maxed tank in two touches)",
+        "Does not bury the request under a themed pitch"
+      ]
+    }
+  ]
+}
