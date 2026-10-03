@@ -132,7 +132,10 @@ The link is long (often 1–7 KB), and **a terminal wraps it and breaks it**, so
 host never paste the raw link. Ask "Open it in your browser?" and on a yes rerun the
 script with `--open`; if it says no browser could be opened, give the path of the
 `<slug>.link.html` page it saved (a button that holds the link). In a chat host that
-renders markdown, give it as a link instead: `[Open the pre-filled issue](<link>)`.
+renders markdown, give it as a link instead: `[Open the pre-filled issue](<link>)`. In a chat
+host the saved `<slug>.md` and `<slug>.link.html` are out of the user's reach by path, so hand
+both over through the host's file-delivery step as well (the `.md` lets them paste anything the
+link had to drop).
 
 Only if the user explicitly asks you to file it for them, and `gh` is installed and signed
 in (`gh auth status`), run the printed `gh issue create` command: it posts under **their**

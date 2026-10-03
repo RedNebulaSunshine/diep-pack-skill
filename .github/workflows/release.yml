@@ -1,0 +1,91 @@
+# Publish a ready-to-upload diep-pack.zip for every version.
+#
+# On every push to main: read metadata.version from SKILL.md; if no tag v<version> exists yet,
+# build the zip, tag the commit and create a GitHub release with that version's CHANGELOG entry
+# as its notes. Nothing happens when the version has already been released, so the maintainer's
+# only release step is the usual one: bump the version, add the changelog entry, push.
+#
+# The zip contains ONE folder named diep-pack (SKILL.md inside it), which is what claude.ai and
+# ChatGPT require; GitHub's own "Download ZIP" names the folder diep-pack-skill-main and is
+# refused. The stable address is
+#   https://github.com/<owner>/<repo>/releases/latest/download/diep-pack.zip
+#
+# Run by hand (Actions > Release > Run workflow) with "dry run" ticked to build the zip as a
+# workflow artifact without tagging or releasing anything.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build diep-pack.zip as an artifact only; create no tag and no release"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read the version from SKILL.md
+        id: meta
+        run: |
+          version=$(python3 -c "import sys; sys.path.insert(0, 'scripts'); import skill_meta; print(skill_meta.read_meta()['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "released=true" >> "$GITHUB_OUTPUT"; echo "v$version is already released"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"; echo "v$version is new"
+          fi
+
+      - name: Build diep-pack.zip
+        run: |
+          rm -rf build && mkdir -p build/diep-pack
+          git archive HEAD | tar -x -C build/diep-pack
+          rm -rf build/diep-pack/.github build/diep-pack/.gitignore
+          find build/diep-pack -name '__pycache__' -prune -exec rm -rf {} +
+          (cd build && zip -qr diep-pack.zip diep-pack)
+          python3 - <<'PY'
+          import re, zipfile
+          z = zipfile.ZipFile("build/diep-pack.zip")
+          names = z.namelist()
+          assert all(n.startswith("diep-pack/") for n in names), "every entry must sit under diep-pack/"
+          assert "diep-pack/SKILL.md" in names, "SKILL.md missing"
+          head = z.read("diep-pack/SKILL.md").decode("utf-8")[:400]
+          assert re.search(r"^name:\s*diep-pack\s*$", head, re.M), "frontmatter name must be diep-pack"
+          print(f"{len(names)} files, {sum(i.file_size for i in z.infolist()) // 1024} KB unpacked")
+          PY
+
+      - name: Keep the zip as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: diep-pack-${{ steps.meta.outputs.version }}
+          path: build/diep-pack.zip
+
+      - name: Tag and release
+        if: ${{ steps.meta.outputs.released == 'false' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          python3 - > build/notes.md <<'PY'
+          import os, re
+          v = os.environ["VERSION"]
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(rf"^## {re.escape(v)} .*?\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+          print((m.group(1).strip() if m else "(no changelog entry)"))
+          print()
+          print("**Install:** download `diep-pack.zip` below and follow the README's *Get it* section.")
+          PY
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+          gh release create "v$VERSION" build/diep-pack.zip \
+            --title "diep-pack $VERSION" --notes-file build/notes.md

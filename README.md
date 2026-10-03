@@ -2,9 +2,9 @@
 
 An [Agent Skill](https://agentskills.io) that turns a plain-English description into a custom
 pack for the **diep.io sandbox editor**: tanks, and the arena shapes they fight over. Describe
-a tank or a theme; the skill designs it, writes
-the `.diep-pack` file, validates it against a reverse-engineered spec of the format, renders it
-the way the editor draws it, looks at the render, and tells you what to try in game.
+a tank or a theme; the skill designs it, writes the `.diep-pack` file, validates it against a
+reverse-engineered spec of the format, renders it the way the editor draws it, looks at the
+render, and tells you what to try in game.
 
 ![X-Wing, rendered by the skill](examples/x-wing/x-wing.png)
 
@@ -13,6 +13,103 @@ the way the editor draws it, looks at the render, and tells you what to try in g
 
 The pack that prompt produced is in [`examples/x-wing/`](examples/x-wing/): the design script,
 the `.diep-pack` it builds, and the PNG and SVG renders.
+
+## Get it
+
+No coding. The skill is one small zip that you hand to the AI you already use; after that you
+ask for tanks in plain English and get files back.
+
+**1. Download [`diep-pack.zip`](https://github.com/RedNebulaSunshine/diep-pack-skill/releases/latest/download/diep-pack.zip).**
+Keep it zipped. (Use this link, not GitHub's green *Code → Download ZIP* button: that one names
+the folder inside differently and the upload is refused.)
+
+**2. Give it to your AI.**
+
+<details open>
+<summary><b>Claude</b> (claude.ai or the Claude desktop app; a free account is enough)</summary>
+
+1. **Settings → Capabilities**: make sure **Code execution** is switched on. The skill needs it
+   to check and draw your tanks.
+2. **Customize → Skills → +** (or *Create skill*) **→ Upload a skill**, and pick `diep-pack.zip`.
+   `diep-pack` appears in your list of skills, switched on.
+3. Open a **new chat** and type, for example:
+
+   > Use the diep-pack skill: a crab whose right claw fires a heavy shell on left click and the
+   > left claw on right click.
+
+Claude will pitch the tank's moves, ask you a couple of quick questions (level, parent tank,
+your author name), then give you the `.diep-pack` as a download with a picture of the tank.
+If you also use Claude Code signed in with the same account, the skill is already there.
+</details>
+
+<details open>
+<summary><b>ChatGPT</b></summary>
+
+- **Business, Enterprise or Edu account:** **Skills → Create → Upload from your computer**, pick
+  `diep-pack.zip`, wait for the scan to finish. Then in a chat: *"Use the diep-pack skill: a
+  hen followed by her chicks that lays eggs on right click."*
+- **Free, Go, Plus or Pro account:** personal plans do not have Skills yet (October 2026), so
+  give ChatGPT the zip yourself. Make a **Project** called *Diep tanks*, add `diep-pack.zip` to
+  its files, and paste this into the project's **Instructions**:
+
+  > `diep-pack.zip` in this project is a skill. At the start of every chat, unzip it with Python,
+  > read `diep-pack/SKILL.md` and follow it step by step, running its scripts from the unzipped
+  > folder. Give me every `.diep-pack` file and every picture it makes as a download.
+
+  Every chat inside that project then knows the skill. (In a hurry? Attach the zip to a single
+  chat and paste the same text as your first message.) ChatGPT's sandbox has no internet, so
+  the skill's own update check prints `NOT CHECKED`; that is fine.
+</details>
+
+<details>
+<summary><b>Claude Code, Codex, Cursor, Gemini CLI and other terminals</b></summary>
+
+```
+git clone https://github.com/RedNebulaSunshine/diep-pack-skill ~/.claude/skills/diep-pack
+```
+
+or clone it into a project's `.claude/skills/diep-pack` to scope it to that project. Then:
+
+```
+/diep-pack a hexagonal smasher that fades when still, spikes spinning fast
+```
+
+Other agents: point the agent at `SKILL.md` or copy the folder to wherever that agent looks
+for skills (Codex: `.agents/skills/diep-pack`). Nothing in the skill depends on a particular
+host. On your own machine you need Python 3.8 or newer and, for PNG renders,
+[Pillow](https://pypi.org/project/Pillow/) (`pip install -r requirements.txt`; without it the
+renderer still writes SVG). A git clone updates itself with your OK (see *Updates* below).
+</details>
+
+**3. Ask for a tank.** Anything goes: a stock-style weapon tank ("a Sniper with two alternating
+barrels and three swarm drones out the back"), a creature or vehicle ("a dragonfly whose
+mandibles are the guns"), a character ("Luke Skywalker", "a firefighter") or a whole themed
+arena ("arena shapes for a desert pack"). The skill works out what the subject should *do*,
+pitches it, and builds it once you pick.
+
+**4. Put it in the game.** Open the diep.io sandbox editor: **Import**, choose the `.diep-pack`
+file you downloaded, **add to this pack**. Your tank is in the upgrade tree at the level and
+parent you chose. More in [Importing a pack](#importing-a-pack).
+
+**If something does not work**
+
+- *Claude says it has no such skill:* check **Customize → Skills** shows `diep-pack` switched
+  on, and start a new chat; skills are picked up when a chat begins.
+- *The upload is refused:* the zip must hold one folder named `diep-pack` with `SKILL.md`
+  inside it. The download link above is built that way; a zip you made yourself may not be.
+- *You get a file path instead of a file:* say "give me the file as a download". (Fixed in
+  1.3.1; an older copy of the skill may still do it.)
+- *The game refuses the pack:* import it from the file, not pasted text; long pasted lines get
+  mangled. If it still refuses, tell the skill what the editor said.
+
+**Updates.** Once a day at most, at the start of a session, the skill checks whether a newer
+version is published and, if so, tells you what it adds ([`CHANGELOG.md`](CHANGELOG.md)) and
+how to update. A `git clone` updates itself with your OK (a fast-forward; local edits are
+never touched); a zip install downloads the new zip from the link above and replaces the old
+skill with it (on claude.ai or ChatGPT: remove the old `diep-pack` skill, upload the new zip).
+The check fetches this repository's `SKILL.md` and `CHANGELOG.md` and sends nothing about you
+or your work. To turn it off, set `DIEP_PACK_NO_UPDATE_CHECK=1`; to check by hand, run
+`python scripts/check_update.py --force`.
 
 ## What it can do
 
@@ -28,44 +125,6 @@ the `.diep-pack` it builds, and the PNG and SVG renders.
   centre, with each shape's share of the spawns predicted before you import.
 - Upgrade-tree placement (level and parent tanks), multi-tank lines, total conversions.
 - Edit mode: change an existing pack without disturbing the rest.
-
-## Install
-
-The skill is a single folder in the
-[Agent Skills](https://agentskills.io) format, so it works in any agent that reads `SKILL.md`.
-
-**Claude Code**
-
-```
-git clone https://github.com/RedNebulaSunshine/diep-pack-skill ~/.claude/skills/diep-pack
-```
-
-or clone it into a project's `.claude/skills/diep-pack` to scope it to that project. Then:
-
-```
-/diep-pack a hexagonal smasher that fades when still, spikes spinning fast
-```
-
-**Claude.ai** upload a zip of this folder as a custom skill in Settings.
-
-**Other agents (Codex, Cursor, Gemini CLI, …)** point the agent at `SKILL.md` or copy the
-folder into wherever that agent looks for skills. Nothing in the skill depends on a
-particular host.
-
-**Requirements**
-
-- Python 3.8 or newer (`python` or `python3`).
-- [Pillow](https://pypi.org/project/Pillow/) for PNG renders: `pip install -r requirements.txt`.
-  Without it the renderer still writes SVG.
-
-**Updates**
-
-Once a day at most, at the start of a session, the skill checks whether a newer version is
-published and, if so, tells you what it adds ([`CHANGELOG.md`](CHANGELOG.md)) and offers to
-update. A `git clone` updates itself with your OK (a fast-forward; local edits are never
-touched); any other install gets download instructions. The check fetches this repository's
-`SKILL.md` and `CHANGELOG.md` and sends nothing about you or your work. To turn it off, set
-`DIEP_PACK_NO_UPDATE_CHECK=1`; to check by hand, run `python scripts/check_update.py --force`.
 
 ## How it works
 
@@ -89,9 +148,11 @@ touched); any other install gets download instructions. The check fetches this r
 | `assets/archetypes/` | Design scripts to copy from: dragonfly, crab, spider, starship, serpent, croc, a face on the hull. |
 | `examples/x-wing/` | A complete worked example with its outputs. |
 | `evals/evals.json` | Plain requests ("Luke Skywalker", "a hen") with what a good answer must propose unprompted: run them after changing `SKILL.md` or `moves.md`. |
+| `.github/workflows/release.yml` | Builds `diep-pack.zip` and publishes a GitHub release whenever the version in `SKILL.md` changes on `main`. |
 
 Packs and renders are written to `./output/` in the directory the agent runs from
-(set `DIEP_PACK_OUT` to change that).
+(set `DIEP_PACK_OUT` to change that). In a chat host (claude.ai, ChatGPT) the skill hands them
+over as downloads.
 
 To try the tooling without an agent:
 

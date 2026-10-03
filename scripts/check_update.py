@@ -154,9 +154,10 @@ def how_to_update(meta, checkout):
     if checkout:
         return "HOW  python <skill>/scripts/check_update.py --apply  (a git fast-forward)"
     return (f"HOW  this install is not a git clone: download "
-            f"https://github.com/{slug}/archive/refs/heads/{br}.zip and replace the skill folder "
-            f"with its contents (on claude.ai, upload the new zip as the skill), or reinstall "
-            f"with: git clone https://github.com/{slug} <skills folder>/diep-pack")
+            f"https://github.com/{slug}/releases/latest/download/diep-pack.zip and replace the "
+            f"skill folder with the diep-pack folder inside it (on claude.ai or ChatGPT: remove "
+            f"the old diep-pack skill and upload the new zip), or reinstall with: "
+            f"git clone https://github.com/{slug} <skills folder>/diep-pack")
 
 
 def report(have, latest, notes, meta, checkout, moved):
