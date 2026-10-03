@@ -15,8 +15,9 @@ NOT CHECKED line and exit 0, never an error. Set DIEP_PACK_NO_UPDATE_CHECK=1 to 
 `--apply` fast-forwards a git checkout that has no local edits and no local commits. Any other
 install gets instructions instead; nothing is overwritten.
 
-Output, first word of each line: UP TO DATE, AHEAD, UPDATE (then NEW IN lines and HOW),
-NOT CHECKED, OFF, UPDATED, CANNOT UPDATE. Standard library only.
+Output, first word of each line: UP TO DATE, AHEAD, UPDATE (then NEW IN lines and HOW; a zip
+install also gets a LINK line with the release zip), NOT CHECKED, OFF, UPDATED, CANNOT UPDATE.
+Standard library only.
 """
 import json
 import os
@@ -153,11 +154,16 @@ def how_to_update(meta, checkout):
     slug, br = skill_meta.repo_slug(meta), skill_meta.branch(meta)
     if checkout:
         return "HOW  python <skill>/scripts/check_update.py --apply  (a git fast-forward)"
-    return (f"HOW  this install is not a git clone: download "
-            f"https://github.com/{slug}/releases/latest/download/diep-pack.zip and replace the "
-            f"skill folder with the diep-pack folder inside it (on claude.ai or ChatGPT: remove "
-            f"the old diep-pack skill and upload the new zip), or reinstall with: "
-            f"git clone https://github.com/{slug} <skills folder>/diep-pack")
+    return chr(10).join([
+        "HOW  this install is a zip or a copied folder, not a git clone, so it cannot update "
+        "itself: download the new zip and reinstall it.",
+        f"LINK https://github.com/{slug}/releases/latest/download/diep-pack.zip",
+        "HOW  claude.ai: Settings > Capabilities > Skills (or Customize > Skills), remove the old "
+        "diep-pack, then Upload skill and choose the zip. ChatGPT: Skills, remove the old one, "
+        "Create > Upload from your computer (or swap the zip in your Project). A folder on disk: "
+        "replace it with the diep-pack folder inside the zip. Only this zip works; GitHub's green "
+        "Download ZIP button is refused.",
+    ])
 
 
 def report(have, latest, notes, meta, checkout, moved):

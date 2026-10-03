@@ -3,7 +3,7 @@ name: diep-pack
 description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor from a plain-English description: tanks (barrels, projectiles, drones, traps, missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings and cuts, a sidekick that follows, eggs that hatch) and into shapes that belong in its world, then pitches or builds them without being told. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a small line of tanks, or the arena's shapes. Also handles 'edit PACK: CHANGE'."
 license: MIT
 metadata:
-  version: "1.3.1"
+  version: "1.3.2"
   repository: "https://github.com/RedNebulaSunshine/diep-pack-skill"
   requires: "Python 3.8+; Pillow for PNG renders (optional)"
 ---
@@ -32,12 +32,20 @@ a download or an image; a path on its own reaches no one. §5, §6 and §8 say w
 Before your first reply in a session, run `python <skill>/scripts/check_update.py`. It
 checks at most once a day, sends nothing about the user, and prints one line when there is
 nothing to say (`UP TO DATE`, `AHEAD`, `NOT CHECKED`, `OFF`); carry on without mentioning
-it. If it prints `UPDATE`, open your reply with two or three lines: the new version, its
-`NEW IN` items in plain words, and an offer ("Update the skill now? It takes a few seconds.").
-Then answer the request as usual, in the same reply. On a yes, run it with `--apply` and
-re-read this file before continuing, since it may have changed; if it says it cannot update
-this install, pass on its `HOW` line. Never update without a yes. If it prints `MOVED`, say
-the skill has a new home.
+it. If it prints `UPDATE`, open your reply with a few lines: the new version, its `NEW IN`
+items in plain words, and what to do next, which the `HOW` line decides:
+
+- **A git clone** (`HOW … --apply`): offer it ("Update the skill now? It takes a few seconds.").
+  On a yes, run `--apply` and re-read this file before continuing, since it may have changed;
+  if it says it cannot update, pass on what it printed. Never update without a yes.
+- **Anything else** (a zip uploaded to claude.ai or ChatGPT, a copied folder; the script prints
+  a `LINK` line): the skill cannot update itself, so do not offer to. Give the `LINK` as a
+  clickable link, that exact release zip, and the one or two reinstall steps from the `HOW`
+  lines for the host you are in (remove the old diep-pack skill, upload the new zip). Say that
+  only that zip works, not GitHub's *Download ZIP* button, whose folder name is refused.
+
+Then answer the request as usual, in the same reply, with the version you have. If it prints
+`MOVED`, say the skill has a new home.
 
 ## 1. Load context, as much as the request needs
 
