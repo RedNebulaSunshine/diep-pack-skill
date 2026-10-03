@@ -3,7 +3,7 @@ name: diep-pack
 description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor from a plain-English description: tanks (barrels, projectiles, drones, traps, missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings and cuts, a sidekick that follows, eggs that hatch) and into shapes that belong in its world, then pitches or builds them without being told. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a small line of tanks, or the arena's shapes. Also handles 'edit PACK: CHANGE'."
 license: MIT
 metadata:
-  version: "1.3.4"
+  version: "1.3.5"
   repository: "https://github.com/RedNebulaSunshine/diep-pack-skill"
   requires: "Python 3.8+; Pillow for PNG renders (optional)"
 ---

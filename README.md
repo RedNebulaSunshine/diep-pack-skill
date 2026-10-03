@@ -108,8 +108,9 @@ how to update. A `git clone` updates itself with your OK (a fast-forward; local 
 never touched); a zip install downloads the new zip from the link above and replaces the old
 skill with it (on claude.ai or ChatGPT: remove the old `diep-pack` skill, upload the new zip).
 The check fetches this repository's `SKILL.md` and `CHANGELOG.md` and sends nothing about you
-or your work. To turn it off, set `DIEP_PACK_NO_UPDATE_CHECK=1`; to check by hand, run
-`python scripts/check_update.py --force`.
+or your work. On claude.ai nothing survives between chats, so it runs at the start of every chat
+and takes about a second. To turn it off, set `DIEP_PACK_NO_UPDATE_CHECK=1`; to check by hand,
+run `python scripts/check_update.py --force`.
 
 ## What it can do
 
