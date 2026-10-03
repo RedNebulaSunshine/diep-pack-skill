@@ -5,6 +5,12 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.3.2 (2026-10-03)
+
+- On a zip install (claude.ai, ChatGPT, a copied folder) the update notice now gives the exact
+  release zip link and the reinstall steps (remove the old skill, upload the new zip) instead of
+  offering an update it cannot perform.
+
 ## 1.3.1 (2026-10-03)
 
 - Install without a terminal: the README walks through adding the skill to Claude (claude.ai
