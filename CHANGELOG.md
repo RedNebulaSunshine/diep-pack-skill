@@ -5,6 +5,12 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.3.3 (2026-10-03)
+
+- Tidy-up, no change in behaviour: the update script drops a variable left over from the old
+  download link, and the README's tooling table says what the check does for a zip install. This
+  release is also the first live test of the update notice on a zip install.
+
 ## 1.3.2 (2026-10-03)
 
 - On a zip install (claude.ai, ChatGPT, a copied folder) the update notice now gives the exact
