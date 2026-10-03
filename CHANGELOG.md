@@ -5,6 +5,12 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.3.4 (2026-10-03)
+
+- The update check fetches past GitHub's five-minute file cache, so a release is seen the moment
+  it is published, and every answer says when it was checked ("checked just now" or "from the
+  cache, checked 40 min ago; --force checks now"), so a stale answer is never silent.
+
 ## 1.3.3 (2026-10-03)
 
 - Tidy-up, no change in behaviour: the update script drops a variable left over from the old

@@ -78,9 +78,11 @@ def fetch_http(meta):
         return None
     files = {}
     for name in ("SKILL.md", "CHANGELOG.md"):
-        url = f"https://raw.githubusercontent.com/{slug}/{br}/{name}"
+        # The query string defeats the CDN's five-minute cache, so a release is seen at once.
+        url = f"https://raw.githubusercontent.com/{slug}/{br}/{name}?{int(time.time())}"
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "diep-pack-update-check"})
+            req = urllib.request.Request(url, headers={"User-Agent": "diep-pack-update-check",
+                                                       "Cache-Control": "no-cache"})
             with urllib.request.urlopen(req, timeout=4) as r:
                 files[name] = r.read().decode("utf-8", "replace")
         except (urllib.error.URLError, OSError, ValueError):
@@ -166,16 +168,28 @@ def how_to_update(meta, checkout):
     ])
 
 
-def report(have, latest, notes, meta, checkout, moved):
+def describe_age(seconds):
+    if seconds < 90:
+        return "a moment ago"
+    if seconds < 7200:
+        return f"{int(seconds // 60)} min ago"
+    return f"{int(seconds // 3600)} h ago"
+
+
+def report(have, latest, notes, meta, checkout, moved, age=None):
     hk, lk = skill_meta.version_key(have), skill_meta.version_key(latest)
     if not (hk and lk):
         print(f"NOT CHECKED the published version could not be read ({latest or 'none'})")
         return
+    # Say when the answer was fetched: a cached answer can be hours old, and a sandbox that
+    # kept its cache would otherwise hide a release published since.
+    when = (f"from the cache, checked {describe_age(age)}; --force checks now" if age is not None
+            else "checked just now")
     if lk <= hk:
         print(f"{'AHEAD' if lk < hk else 'UP TO DATE'} diep-pack {have}"
-              + (f" (published: {latest})" if lk < hk else ""))
+              + (f" (published: {latest})" if lk < hk else "") + f" ({when})")
         return
-    print(f"UPDATE diep-pack {latest} is available (this install is {have})")
+    print(f"UPDATE diep-pack {latest} is available (this install is {have}; {when})")
     for line in notes or ["  (no changelog entry)"]:
         print(line)
     if moved:
@@ -190,7 +204,7 @@ def check(force):
     cached = load_cache()
     if not force and cached.get("have") == have and time.time() - cached.get("at", 0) < ONCE_EVERY:
         report(have, cached.get("latest", ""), cached.get("notes"), meta, checkout,
-               cached.get("moved"))
+               cached.get("moved"), age=time.time() - cached.get("at", 0))
         return 0
     files = fetch_git(meta) if checkout else None
     files = files or fetch_http(meta)
