@@ -5,6 +5,11 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.3.5 (2026-10-03)
+
+- README: on claude.ai the update check runs at the start of every chat, since nothing survives
+  between chats there, and takes about a second. Second live test of the update notice.
+
 ## 1.3.4 (2026-10-03)
 
 - The update check fetches past GitHub's five-minute file cache, so a release is seen the moment
