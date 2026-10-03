@@ -5,6 +5,11 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.2.4 (2026-10-03)
+
+- Loads on claude.ai: the description is quoted YAML with no angle brackets, and the Claude
+  Code-only `argument-hint` line is gone, so uploading the zip as a skill no longer fails.
+
 ## 1.2.3 (2026-10-03)
 
 - The skill is public: it now lives at github.com/RedNebulaSunshine/diep-pack-skill. Update
