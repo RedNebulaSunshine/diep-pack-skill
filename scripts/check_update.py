@@ -151,7 +151,7 @@ def save_cache(entry):
 
 
 def how_to_update(meta, checkout):
-    slug, br = skill_meta.repo_slug(meta), skill_meta.branch(meta)
+    slug = skill_meta.repo_slug(meta)
     if checkout:
         return "HOW  python <skill>/scripts/check_update.py --apply  (a git fast-forward)"
     return chr(10).join([
