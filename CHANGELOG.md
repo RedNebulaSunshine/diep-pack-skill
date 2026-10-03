@@ -5,6 +5,17 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.3.1 (2026-10-03)
+
+- Install without a terminal: the README walks through adding the skill to Claude (claude.ai
+  and the desktop app; Claude Code on the same account gets it too) and to ChatGPT (Skills on
+  work plans; a Project with the zip on personal plans), and every release now ships a ready
+  `diep-pack.zip` on GitHub Releases, built automatically, with the folder name claude.ai
+  accepts. The update check sends zip installs there.
+- Chat hosts (issue #2): the skill now tells a terminal host from a chat host and, in a chat,
+  hands the pack, its render and any feedback draft over through the host's download step
+  instead of printing a path the user cannot open.
+
 ## 1.3.0 (2026-10-03)
 
 - Pulsing light (a user's discovery, issue #1): two star shapes on one spot in two tones of one

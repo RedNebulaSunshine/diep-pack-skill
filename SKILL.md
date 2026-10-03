@@ -3,7 +3,7 @@ name: diep-pack
 description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor from a plain-English description: tanks (barrels, projectiles, drones, traps, missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings and cuts, a sidekick that follows, eggs that hatch) and into shapes that belong in its world, then pitches or builds them without being told. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a small line of tanks, or the arena's shapes. Also handles 'edit PACK: CHANGE'."
 license: MIT
 metadata:
-  version: "1.3.0"
+  version: "1.3.1"
   repository: "https://github.com/RedNebulaSunshine/diep-pack-skill"
   requires: "Python 3.8+; Pillow for PNG renders (optional)"
 ---
@@ -19,6 +19,13 @@ directory (the folder holding this SKILL.md). Run the scripts by their absolute 
 user's working directory: packs and renders land in `./output/` there (override with
 `$DIEP_PACK_OUT`). Use `python3` where `python` is not the interpreter's name. Only the
 renderer needs a third-party package (Pillow); everything else is standard library.
+
+**Host.** Decide once, at the start, whether you are in a *terminal host* (Claude Code, Codex
+and other CLIs on the user's own machine, where any path you print can be opened) or a *chat
+host* (claude.ai, ChatGPT and other sandboxed chats, where the user cannot see your working
+directory at all). In a chat host every file the user needs, the pack, its render, a feedback
+draft, must also go through the host's own file-delivery step, whatever it is that shows them
+a download or an image; a path on its own reaches no one. §5, §6 and §8 say where this matters.
 
 ## 0. Once per session: is there a newer version of the skill?
 
@@ -344,11 +351,14 @@ new one: never hand over two different packs under the same number.
 
 Reply with, in this order:
 
-1. The **version** and the bump (§5a), then the **file path** of the saved pack, absolute, on its own line, with the instruction to
-   import it from file (or open it in an editor and copy from there). Then the one-line
-   JSON in a `json` code block for packs under about 2 KB. Do not paste longer packs into
-   the reply: terminals wrap or truncate long single-line code blocks on copy and the
-   result fails to parse in the game.
+1. The **version** and the bump (§5a), then the pack **file**. In a terminal host: its
+   absolute path on its own line, with the instruction to import it from file (or open it in
+   an editor and copy from there). In a chat host: hand the `.diep-pack` over through the
+   host's file-delivery step so the user gets a download, show the render the same way, and
+   name the file rather than printing a path nobody can open. Then the one-line JSON in a
+   `json` code block for packs under about 2 KB. Do not paste longer packs into the reply:
+   terminals wrap or truncate long single-line code blocks on copy and the result fails to
+   parse in the game.
 2. **Recap**, a few bullets per tank: the signature moves first, each in plain words with
    its button; level and parent(s); barrels by type; projectiles and what makes them special;
    any guessed or Medium/Low-confidence fields, named. Run the check of `moves.md` §4 and
