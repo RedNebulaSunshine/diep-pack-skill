@@ -59,11 +59,24 @@ treasure chest worth a level in the middle" is what the user hoped for.
 
 ## 2. Roles and their numbers
 
-The vanilla reference, from the editor's help text (Confirmed, editor code): a square does 2
-contact damage, shoves with 8, takes knockback 1 and spawns at weight 1; triangles weigh 0.2,
-pentagons 0.05; a pentagon takes knockback 0.5 and an alpha pentagon 0.05. Health and score are
-diep's long-standing values (Medium): square 10 / 10, triangle 30 / 25, pentagon 100 / 130,
-alpha pentagon 3000 / 3000, sizes about 55 / 55 / 75 / 200. Score roughly tracks health; a
+**The vanilla shapes, as the editor itself writes them** (Confirmed 2026-10-04: the editor's
+*copy* of each stock shape, exported and read; missing `maxHealth`/`xpBounty` = 10). These are
+the numbers a themed replacement should match or deliberately depart from:
+
+| Kind (`replaces` / `raises` name) | sides | `size` | health / score | touch dmg / shove | knockback taken | movement | weight | band |
+|---|---|---|---|---|---|---|---|---|
+| `square` | 4 | 55 | 10 / 10 | 2 / 8 | 1 | drift 0.1 | 1 | 0.2–1 |
+| `triangle` | 3 | 55 | 30 / 25 | 2 / 8 | 1 | drift 0.1 | 0.2 | 0.2–1 |
+| `pentagon` | 5 | 75 | 100 / 130 | 3 / 11 | 0.5 | drift 0.05 | 0.05 | 0.2–1 |
+| `big_pentagon` (Alpha Pentagon) | 5 | 200 | 3000 / 3000 | 5 / 11 | 0.05 | drift 0.05 | 0.005 | 0–0.1 |
+| `big_crasher` (Crasher) | 3 | 55 | 30 / 25 | 2 / 12 | 0.1 | crasher: speed 2.6, radius 2000, drift 0.1 | 0.02 | 0–0.2 |
+| `small_crasher` | 3 | 35 | 10 / 15 | 2 / 8 | 2 | crasher: speed 2.7, radius 2000, drift 0.1 | 0.1 | 0–0.2 |
+| `hexagon` | 6 | 100 | 1500 / 1500 | 4 / 10 | 0.1 | drift 0.05 | 0.004 | 0.2–1 |
+
+So the stock map is two zones: the outer 80 % is food (square, triangle, pentagon, the rare
+hexagon) and the inner 20 % is the pentagon nest, where only Alpha Pentagons (centre 10 %) and
+the two crashers spawn. Nothing vanilla spawns in both. Colours are not in this table: the
+export it came from was recoloured; the stock colours are in §4. Score roughly tracks health; a
 tank needs about 23 500 score for level 45 (Medium), so what an arena pays sets how fast players
 climb.
 
@@ -123,7 +136,10 @@ Contact damage is how a theme says "don't touch": give it to what the fan would 
   which is `crowd × (inner + outer)`: 1.8 / 1.2 / 0.4 for bands 0.8–1 / 0.4–0.8 / 0–0.4 came
   out close to even in play. A deliberately packed heart (a nest) just keeps equal weights.
 - Stacked bands are the arena's geography. Three to four rings read clearly; a shape can also
-  span several rings (a food that is everywhere, `radius_min` 0 and `radius_max` 1).
+  span several rings (a food that is everywhere, `radius_min` 0 and `radius_max` 1). Vanilla
+  itself is two zones (§2): food in 0.2–1, the nest in 0–0.2 (crashers) and 0–0.1 (Alpha
+  Pentagons). A pack that keeps some vanilla shapes inherits those bands, and `spawn_shares()`
+  counts them that way.
 - Leave no band empty of food, or that part of the map is dead. Bands may overlap (a hazard
   in the same ring as the food it guards); overlap is untested but the share model still
   gives the expected mix.

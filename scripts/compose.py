@@ -823,9 +823,15 @@ class Tank(_mechanics()):
 
 
 VANILLA_SHAPES = ("square", "triangle", "pentagon", "big_pentagon", "hexagon", "small_crasher", "big_crasher")
-# spawn weights of the vanilla shapes, from the editor's help text ("next to squares at 1, triangles
-# 0.2, pentagons 0.05"); the other four are not given and are left out of spawn_shares()
-VANILLA_WEIGHT = {"square": 1, "triangle": 0.2, "pentagon": 0.05}
+# spawn weight and band (radiusMin, radiusMax) of every vanilla shape, as the editor's own copy of
+# each stock shape writes them (2026-10-04; arena.md section 2): food in the outer 80 %, Alpha
+# Pentagons and crashers in the nest
+VANILLA_SPAWN = {
+    "square": (1, 0.2, 1), "triangle": (0.2, 0.2, 1), "pentagon": (0.05, 0.2, 1),
+    "big_pentagon": (0.005, 0, 0.1), "big_crasher": (0.02, 0, 0.2), "small_crasher": (0.1, 0, 0.2),
+    "hexagon": (0.004, 0.2, 1),
+}
+VANILLA_WEIGHT = {k: v[0] for k, v in VANILLA_SPAWN.items()}
 
 
 def ring_density(inner, outer, crowd=1.0):
@@ -920,11 +926,11 @@ class Pack:
         per area relative to the map average (spec 1a, "Spawn shares": a shape's share goes with
         density x band width, as if the game picked a spot and a shape by weight and kept the pair
         only when the spot lies in that shape's band; measured within about 5 in 100). Vanilla
-        shapes that are not hidden or replaced count at their known weights over the whole map.
-        Returns [(name, share, crowding)]."""
+        shapes that are not hidden or replaced count at their own weights and bands (VANILLA_SPAWN:
+        food 0.2-1, crashers 0-0.2, Alpha Pentagons 0-0.1). Returns [(name, share, crowding)]."""
         hidden = set(self.hidden_shapes or ())
         hidden |= {(s.get("editor") or {}).get("replaces") for s in self.shapes}
-        entries = [(k, w, 0.0, 1.0) for k, w in VANILLA_WEIGHT.items() if k not in hidden]
+        entries = [(k, w, lo, hi) for k, (w, lo, hi) in VANILLA_SPAWN.items() if k not in hidden]
         for s in self.shapes:
             sp = s.get("spawn", {})
             w = 0 if (s.get("editor") or {}).get("disabled") else sp.get("densityMultiplier", 0.01)
