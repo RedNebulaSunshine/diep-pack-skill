@@ -21,7 +21,9 @@ change.
   hidden): `from_stock` remembers it for `save()`, and the command line takes
   `--twin 100001=Tank`. `from_stock(..., children=[...])` writes `advancesInto`. Tested against
   the Cute Diep pilot pack (4 tanks cloned by hand from the stock export): it passes, and
-  `from_stock` rebuilds the same stock fields.
+  `from_stock` rebuilds the same stock fields. The pilot was played in game (2026-10-03): the
+  starter, the tree wiring, `replaces` + `hidden`, parts riding stock barrels (`mount`) and
+  projectile parts all worked (spec §1, tank table).
 
 ## 1.4.0 (2026-10-04)
 
