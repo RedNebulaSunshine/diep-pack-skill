@@ -249,7 +249,8 @@ Tank, Dual-Barrel and Pellet Shot are 58, 60, 61 (all six confirmed in game).
   pack's own) and does the `editor.replaces` and `hidden` bookkeeping; add rods, shapes,
   turrets and projectile parts on top. `save()` prints a NOTE for each field that differs from
   the stock tank in play, and `validate_pack.py <pack> --cosmetic` turns those into ERRORs: run
-  it on every reskin.
+  it on every reskin (`--twin 100001=Tank` names the twin of a reskinned starter, which has no
+  `editor.replaces`; `from_stock(..., children=[...])` writes `advancesInto`).
 - **Units**: radians; `delay` in reload periods (0.5 alternates); `lifetime` seconds;
   `spin`, `spinSpeed`, `invisibility.gain` per tick (25/s); `zoomMultiplier` < 1 = wider view.
 - **Consistency**: `bulletType` equals the target projectile's `base`; decorative barrels

@@ -875,13 +875,15 @@ class Pack:
         self.tanks.append(t)
         return t
 
-    def from_stock(self, name, level=None, parents=(), as_name=None, replace=True):
+    def from_stock(self, name, level=None, parents=(), as_name=None, replace=True, children=()):
         """A Tank pre-filled from the editor's own stock roster (references/stock-tanks.diep-pack;
         `name` is a stock tank's name or vanilla id, see `ref.py stock`): tank-level fields, body,
         projectiles, barrels, body shapes and turrets are loaded verbatim, numbers unrounded, and
         keep their indices, so presets, rod(), shape(), turret() and projectile parts go on top
         as decoration. level defaults to the stock tank's, `as_name` renames it (default: the
-        stock name), parents are this pack's own tree links. replace=True makes it stand in for
+        stock name), parents are this pack's own tree links (upgradesFrom) and children the
+        tanks it advances into (advancesInto: stock ids or this pack's ids, e.g. a starter that
+        leads into a clone of Flank Guard). replace=True makes it stand in for
         the stock tank: editor.replaces is the vanilla id and the id joins this pack's `hidden`
         list, so the stock tank and its clone never both appear (not for the base Tank, which
         cannot be hidden). Parts added later draw after the stock ones unless given an order.
@@ -904,6 +906,8 @@ class Pack:
                 highest = max(highest, d.get("order", 0))
         t._order = highest + 1
         t.stock_id = vid
+        if children:
+            t.fields["advancesInto"] = list(children)
         if replace and vid:
             t.fields["editor"] = {"replaces": vid}
             self.hidden = list(self.hidden or [])
@@ -1068,7 +1072,8 @@ class Pack:
             for e in rep.errors:
                 print("ERROR " + e)
             errors = len(rep.errors)
-            for label, _, _, diffs in mod.stock_twins(pack):
+            twins = {self.id_of(t): t.stock_id for t in self.tanks if getattr(t, "stock_id", None) is not None}
+            for label, _, _, diffs in mod.stock_twins(pack, twins):
                 for line in diffs:
                     print(f"NOTE {label} differs from stock in play: {line}")
         if render and not errors:

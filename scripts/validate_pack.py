@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate a .diep-pack file against references/schema/.
 
-Usage:  python validate_pack.py <file.diep-pack> [--summary] [--cosmetic]
+Usage:  python validate_pack.py <file.diep-pack> [--summary] [--cosmetic] [--twin ID=STOCK ...]
 
 Exit status 1 if any ERROR is found; WARNINGs never fail the run. Standard library only.
 Every allowlist and rule below is taken from references/schema/; when the spec
@@ -12,8 +12,10 @@ stock tank (references/stock-tanks.diep-pack) and prints a NOTE listing what cha
 (barrel angles, offsets, delays, multipliers and width, projectile fields, statsMaxLevel,
 speed, zoom, hull size, collidable shapes; "field: stock -> pack"). Decoration passes:
 bulletType none barrels, non-collidable shapes, turrets without barrels, projectile parts,
-colours, draw order. --cosmetic is for a reskin: every such difference is an ERROR, and so
-is a pack with no tank that has editor.replaces to check.
+colours, draw order, tree links (upgradesFrom, advancesInto). --cosmetic is for a reskin:
+every such difference is an ERROR, and so is a pack with nothing to compare. A reskinned
+starter that clones the base Tank has no editor.replaces (Tank cannot be hidden); name its
+twin with --twin 100001=Tank (the pack tank id, then a stock name or vanilla id).
 """
 import importlib.util
 import json
@@ -1069,7 +1071,7 @@ def check_upgrade_counts(rep, tanks, hidden):
 # bulletSizeMultiplier, spec 4), projectile fields, statsMaxLevel, speed, zoom, hull size, and
 # any shape with `collidable` (a non-collidable part is picture only, spec 5).
 
-COSMETIC_TANK = {"id", "name", "upgradesFrom", "editor", "helpText"}
+COSMETIC_TANK = {"id", "name", "upgradesFrom", "advancesInto", "editor", "helpText"}   # tree links and labels
 TANK_PARTS = {"body", "projectiles", "barrels", "bodyShapes", "turrets"}
 COSMETIC_BARREL = {"color", "editor", "order", "muzzleScale", "invisible"}
 COSMETIC_SHAPE = {"color", "editor", "order", "aboveBody", "staysVisible"}
@@ -1189,22 +1191,38 @@ def play_changes(tank, stock):
     return out
 
 
-def stock_twins(pack):
-    """[(label, tank, stock tank, differences)] for every tank with editor.replaces naming a
-    stock tank in references/stock-tanks.diep-pack, or [] when that roster is absent."""
+def _load_ref():
     here = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location("ref", os.path.join(here, "ref.py"))
+    ref = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ref)
+    return ref
+
+
+def _stock_id(query):
+    vid = _load_ref().stock_tank(query)[0]
+    if vid is None:
+        raise ValueError(f"{query!r} has no vanilla id")
+    return vid
+
+
+def stock_twins(pack, twins=None):
+    """[(label, tank, stock tank, differences)] for every tank with editor.replaces naming a
+    stock tank in references/stock-tanks.diep-pack, or [] when that roster is absent. `twins`
+    {pack tank id: vanilla id} adds tanks that cannot carry replaces: a clone of the base Tank
+    (0), which cannot be hidden, so a reskinned starter has no replaces to read."""
     try:
-        spec = importlib.util.spec_from_file_location("ref", os.path.join(here, "ref.py"))
-        ref = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(ref)
-        roster = ref.stock_by_vanilla_id()
+        roster = _load_ref().stock_by_vanilla_id()
     except (OSError, ValueError, KeyError):
         return []
     out = []
     for i, t in enumerate(pack.get("tanks") or []):
-        r = (t.get("editor") or {}).get("replaces") if isinstance(t, dict) and isinstance(t.get("editor"), dict) else None
+        if not isinstance(t, dict):
+            continue
+        r = (t.get("editor") or {}).get("replaces") if isinstance(t.get("editor"), dict) else None
+        r = (twins or {}).get(t.get("id"), r)
         if is_int(r) and r in roster:
-            label = f"tanks[{i}] {t.get('name')!r} (replaces {r} {roster[r]['name']})"
+            label = f"tanks[{i}] {t.get('name')!r} (twin of {r} {roster[r]['name']})"
             out.append((label, t, roster[r], play_changes(t, roster[r])))
     return out
 
@@ -1330,7 +1348,17 @@ def main(argv):
         return 1
     rep = validate(pack)
     cosmetic = "--cosmetic" in argv[2:]
-    twins = stock_twins(pack) if isinstance(pack.get("tanks"), list) else []
+    named = {}
+    rest = argv[2:]
+    for i, a in enumerate(rest):
+        if a == "--twin":
+            tid, _, stock = (rest[i + 1] if i + 1 < len(rest) else "").partition("=")
+            try:
+                named[int(tid)] = _stock_id(stock)
+            except ValueError as e:
+                print(f"ERROR --twin needs ID=STOCK (a pack tank id, a stock name or vanilla id): {e}")
+                return 1
+    twins = stock_twins(pack, named) if isinstance(pack.get("tanks"), list) else []
     notes = []
     for label, _, _, diffs in twins:
         for line in diffs:
@@ -1339,7 +1367,7 @@ def main(argv):
             else:
                 notes.append(f"{label} differs from stock in play: {line}")
     if cosmetic and not twins:
-        rep.error("pack", "--cosmetic: no tank has editor.replaces naming a stock tank, so there is nothing to compare")
+        rep.error("pack", "--cosmetic: no tank has editor.replaces naming a stock tank (or a --twin), so there is nothing to compare")
     for w in rep.warnings:
         print("WARNING " + w)
     for n in notes:

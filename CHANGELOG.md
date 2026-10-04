@@ -16,7 +16,12 @@ change.
   notes what changes play: barrel angles, offsets, delays, multipliers and width, projectile
   fields, `statsMaxLevel`, speed, zoom, hull size, collidable shapes. Decoration passes
   (`bulletType: "none"` barrels, non-collidable shapes, turrets without barrels, projectile
-  parts, colours). `--cosmetic` turns the differences into errors for a reskin pack.
+  parts, colours, tree links). `--cosmetic` turns the differences into errors for a reskin pack.
+  A reskinned starter that clones the base Tank has no `editor.replaces` (Tank cannot be
+  hidden): `from_stock` remembers it for `save()`, and the command line takes
+  `--twin 100001=Tank`. `from_stock(..., children=[...])` writes `advancesInto`. Tested against
+  the Cute Diep pilot pack (4 tanks cloned by hand from the stock export): it passes, and
+  `from_stock` rebuilds the same stock fields.
 
 ## 1.4.0 (2026-10-04)
 
