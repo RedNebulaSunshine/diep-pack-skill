@@ -5,6 +5,19 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.5.0 (2026-10-04)
+
+- `Pack.from_stock(name)` in `compose.py` returns a Tank pre-filled from the stock roster: the
+  tank's fields, body, projectiles, barrels, body shapes and turrets, verbatim and unrounded, with
+  presets, rods, shapes and projectile parts added on top. It also sets `editor.replaces` and
+  adds the vanilla id to the pack's `hidden` list (`replace=False` to skip; the base Tank cannot
+  be hidden). `save()` prints a NOTE for every field that differs from the stock tank in play.
+- `validate_pack.py` diffs every tank that carries `editor.replaces` against its stock twin and
+  notes what changes play: barrel angles, offsets, delays, multipliers and width, projectile
+  fields, `statsMaxLevel`, speed, zoom, hull size, collidable shapes. Decoration passes
+  (`bulletType: "none"` barrels, non-collidable shapes, turrets without barrels, projectile
+  parts, colours). `--cosmetic` turns the differences into errors for a reskin pack.
+
 ## 1.4.0 (2026-10-04)
 
 - The skill now ships the sandbox editor's own export of its 54 stock tanks
