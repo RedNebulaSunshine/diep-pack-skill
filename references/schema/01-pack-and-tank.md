@@ -48,6 +48,23 @@ replacement: 6 sides, size 100, health 1500, xp 1500).
 | `spawn.densityMultiplier` | number | `0` (event only), `1e-7`–`999` | The editor calls it **Spawn weight**: "How often it is picked, next to squares at 1, triangles 0.2, pentagons 0.05." A relative weight, not a count: shapes share the map's shape cap (a sandbox setting). 0 = never spawns naturally; missing = 0.01. In play, 1.0 beside the vanilla shapes made about 40–50 % of spawns (2026-09-26), as 1 / (1 + 1.25) predicts. How it combines with the spawn band: "Spawn shares" below. | Confirmed |
 | `spawn.radiusMin` / `radiusMax` | number | `0`–`1` | The spawn band: the editor's two sliders read "how far out from the centre of the map it may spawn, 0% is the centre, 100% is the edge", stored as fractions. The map is rectangular (usually square), so a band is a square ring. Omitted means 0 / 1 (anywhere). Confirmed in play 2026-09-29 (`arena-zone-test`): three stacked bands (0.8–1, 0.4–0.8, 0–0.4) stayed apart and followed the square edges. **A band's share of the shapes goes with its width, not its area** (see "Spawn shares" below), so the centre crowds. | Confirmed |
 | `editor.replaces` | string | `"hexagon"` | Vanilla shape kind whose place this takes (paired with `hiddenShapes`): the editor's wording is "your version spawns in its place". | High |
+
+**The seven vanilla shapes, as the editor's own copy of each writes them** (Confirmed 2026-10-04, exported
+and read; `maxHealth`/`xpBounty` missing = 10; colours omitted, that export was recoloured):
+
+```json
+{"name":"Square","sides":4,"size":55,"damageOnTouch":2,"knockbackOnTouch":8,"ai":{"floatSpeed":0.1},"spawn":{"radiusMin":0.2,"densityMultiplier":1}}
+{"name":"Triangle","sides":3,"size":55,"maxHealth":30,"xpBounty":25,"damageOnTouch":2,"knockbackOnTouch":8,"ai":{"floatSpeed":0.1},"spawn":{"radiusMin":0.2,"densityMultiplier":0.2}}
+{"name":"Pentagon","sides":5,"size":75,"maxHealth":100,"xpBounty":130,"damageOnTouch":3,"knockbackOnTouch":11,"knockbackMultiplier":0.5,"ai":{"floatSpeed":0.05},"spawn":{"radiusMin":0.2,"densityMultiplier":0.05}}
+{"name":"Alpha Pentagon","sides":5,"size":200,"maxHealth":3000,"xpBounty":3000,"damageOnTouch":5,"knockbackOnTouch":11,"knockbackMultiplier":0.05,"ai":{"floatSpeed":0.05},"spawn":{"radiusMax":0.1,"densityMultiplier":0.005}}
+{"name":"Crasher","sides":3,"size":55,"maxHealth":30,"xpBounty":25,"damageOnTouch":2,"knockbackOnTouch":12,"knockbackMultiplier":0.1,"ai":{"floatSpeed":0.1,"aggressiveCrashRadius":2000,"aggressiveCrashSpeed":2.6},"spawn":{"radiusMax":0.2,"densityMultiplier":0.02}}
+{"name":"Small Crasher","sides":3,"size":35,"xpBounty":15,"damageOnTouch":2,"knockbackOnTouch":8,"knockbackMultiplier":2,"ai":{"floatSpeed":0.1,"aggressiveCrashRadius":2000,"aggressiveCrashSpeed":2.7},"spawn":{"radiusMax":0.2,"densityMultiplier":0.1}}
+{"name":"Hexagon","sides":6,"size":100,"maxHealth":1500,"xpBounty":1500,"damageOnTouch":4,"knockbackOnTouch":10,"knockbackMultiplier":0.1,"ai":{"floatSpeed":0.05},"spawn":{"radiusMin":0.2,"densityMultiplier":0.004}}
+```
+
+The weights for the four the help text does not name (Alpha Pentagon 0.005, Crasher 0.02, Small Crasher 0.1,
+Hexagon 0.004) and every band come from here: vanilla food spawns in 0.2–1, crashers in 0–0.2, Alpha Pentagons
+in 0–0.1. `compose.VANILLA_SPAWN` carries them for `spawn_shares()`.
 | `editor.disabled` | bool | `true` | Not spawned while disabled (all "(Event)" shapes carry it). Confirmed 2026-09-26: a disabled shape at density 1.0 never appeared. | Confirmed |
 | `editor.spawnWeight` | number | `0.003`–`1` | **The weight a disabled shape keeps**: disabling writes `spawn.densityMultiplier: 0` and parks the real weight here, and enabling restores it. | Confirmed (editor code) |
 

@@ -5,6 +5,24 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.4.0 (2026-10-04)
+
+- The skill now ships the sandbox editor's own export of its 54 stock tanks
+  (`references/stock-tanks.diep-pack`) and serves it one tank at a time: `ref.py stock` lists
+  the roster with each tank's vanilla id, level and parts, `ref.py stock "Twin Flank" 14` prints
+  tanks verbatim by name or id, `ref.py stock --using raises` finds the tanks that use a field.
+  A reskin, "a Penta Shot with ears" or any "stock tank plus …" design clones the real tank
+  instead of rebuilding it from recipe excerpts and guesses (issues #8 and #9).
+- The seven vanilla shapes as the editor itself writes them (size, health, score, contact
+  damage, knockback, drift, crasher speed and radius, spawn weight and band) are now a table in
+  arena.md §2 and verbatim JSON in the spec §1a. Four weights and every band were new: Alpha
+  Pentagon 0.005 in the centre 10 %, Crasher 0.02 and Small Crasher 0.1 in the inner 20 %,
+  Hexagon 0.004; vanilla food spawns only in the outer 80 %. `spawn_shares()` now counts the
+  vanilla shapes it keeps at those weights and bands instead of three weights over the whole map.
+- Reporting a finding: the draft can carry no file, so the skill no longer says "attached"; it
+  tells the user to drop a file into a comment on the issue page after filing, and the reporter
+  warns when a draft still claims an attachment.
+
 ## 1.3.5 (2026-10-03)
 
 - README: on claude.ai the update check runs at the start of every chat, since nothing survives

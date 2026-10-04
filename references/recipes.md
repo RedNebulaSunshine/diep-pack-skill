@@ -2,6 +2,10 @@
 
 Each section quotes the distinguishing fields of a real stock tank, copied verbatim from
 the stock tanks copied out of the game (float noise trimmed). Fields not shown are at default and omitted.
+These excerpts are a subset: the source of truth is the editor's own roster export,
+`references/stock-tanks.diep-pack`, served one tank at a time by `ref.py stock <name>`. A design
+that must keep a stock tank's mechanics exactly (a reskin, "a Penta Shot with ears", an "X
+variant") clones that tank from `ref.py stock` instead of assembling it from the sections here.
 Every tank also carries the always-written envelope:
 
 ```json

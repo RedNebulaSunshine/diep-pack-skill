@@ -320,6 +320,9 @@ def main(argv):
               ", ".join(k for k in f if shown.get(k) != f.get(k)))
     print(f"BODY   {body_path}  (sanitised, unshortened)")
     print("\n" + plain_body(shown))
+    if re.search(r"\battach(ed|ment|ing)?\b", plain_body(f), re.I):
+        print("NOTE   the draft mentions an attachment, but neither the link nor `gh issue create` can carry a "
+              "file: reword it, and tell the user to drop the file into a comment on the issue page after filing.")
     print(f"DUPLICATES  {search}")
     print(f"LINK ({len(url)} chars, {'plain body' if plain else 'issue form'})\n{url}")
     print(f"PAGE   {page_path}  (the same link as a button: a terminal wraps long links)")

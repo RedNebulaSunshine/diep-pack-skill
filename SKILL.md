@@ -3,7 +3,7 @@ name: diep-pack
 description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor from a plain-English description: tanks (barrels, projectiles, drones, traps, missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings and cuts, a sidekick that follows, eggs that hatch) and into shapes that belong in its world, then pitches or builds them without being told. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a small line of tanks, or the arena's shapes. Also handles 'edit PACK: CHANGE'."
 license: MIT
 metadata:
-  version: "1.3.5"
+  version: "1.4.0"
   repository: "https://github.com/RedNebulaSunshine/diep-pack-skill"
   requires: "Python 3.8+; Pillow for PNG renders (optional)"
 ---
@@ -60,6 +60,7 @@ python <skill>/scripts/ref.py spec 7a                 # the spec, by its § numb
 python <skill>/scripts/ref.py --find keepDistance     # every section that mentions a term
 python <skill>/scripts/ref.py api                     # compose.py and its presets, one line per call
 python <skill>/scripts/ref.py api trail jaws          # those calls in full
+python <skill>/scripts/ref.py stock "Twin Flank"      # a stock tank verbatim, from the editor's own roster
 ```
 
 Read a section once per session; it stays in context. Open a whole file only where this list
@@ -89,6 +90,14 @@ When needed:
   arena in one line; do not build it).
 - `references/vanilla-tanks.md`, whole (small), when placing the tank in the upgrade tree
   (IDs, levels, parents, which IDs the engine rejects).
+- `ref.py stock <name>` whenever a design must keep a stock tank's mechanics exactly: a
+  reskin or cosmetic pack, "a Penta Shot with ears", "a Twin Flank that also …", "an X
+  variant" for any stock X. It prints that tank verbatim from the sandbox editor's own roster
+  export (`references/stock-tanks.diep-pack`, 54 tanks, 200–900 bytes each): every barrel
+  angle, offset, delay and multiplier, drone counts, projectile fields, stat caps, help text,
+  zoom and scope. Clone it and add to it; never rebuild a stock tank from recipe excerpts and
+  guesses. `ref.py stock` lists the roster, `ref.py stock --using raises` the tanks that use a
+  field. Never open the roster file itself (14k tokens).
 - `references/figurative.md` when the request names a subject with a shape (an animal,
   vehicle, object, "looks like …", "shaped like …") or asks for more than a handful of
   decorative parts: `ref.py figurative 1 2 3b 4 5` (building blocks, the silhouette-first
@@ -228,6 +237,13 @@ Tank, Dual-Barrel and Pellet Shot are 58, 60, 61 (all six confirmed in game).
   `statsMaxLevel`; projectile `name`, `base`, `sides`; barrel `bulletType`, `projectile`;
   drone barrel `numDrones`, `droneAggressiveCrashRadius` (900 unless the recipe says otherwise).
 - **IDs** 100001, 100002, … in pack order. Pack `name` = first tank's name.
+- **Stock clones and reskins.** A tank that is a stock tank plus something starts from
+  `ref.py stock <name>` and keeps every mechanical field as printed (the pack id, name and
+  tree links are the pack's own). A cosmetic-only or reskin pack adds nothing that changes
+  play: non-collidable body shapes, decorative barrels and turrets (`bulletType: "none"`,
+  `projectile: -1`), parts on the projectiles; and each clone takes its stock tank's slot
+  with `editor.replaces: N` plus `N` in the pack's `hidden` list, so the stock tank and its
+  reskin never both appear.
 - **Units**: radians; `delay` in reload periods (0.5 alternates); `lifetime` seconds;
   `spin`, `spinSpeed`, `invisibility.gain` per tick (25/s); `zoomMultiplier` < 1 = wider view.
 - **Consistency**: `bulletType` equals the target projectile's `base`; decorative barrels
