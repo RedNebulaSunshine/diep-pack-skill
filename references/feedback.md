@@ -92,6 +92,13 @@ needs to make the change goes in the issue.
 | `suggestion` | | The change, as text that could be pasted into the named section, with the confidence tag it earns | The text to add, in that file's style, and a preset signature if it deserves one |
 | `confidence` | | `Confirmed in game`, `likely` or `guess` | the same |
 | `pack` | | Only if the user agrees: the smallest excerpt that shows it, not the whole pack | Only if the user agrees: the parts that make the trick |
+
+**No file travels with the issue.** The link and `gh issue create` carry text only, so never
+write "attached" or "see the attached file" in a draft: the maintainer receives nothing. When a
+whole file matters (a full export, a pack that reproduces a refusal), say in `observed` that the
+file exists and how big it is, and tell the user that after the issue is filed they can drop the
+file into a comment on the issue page on GitHub, which does accept files; name the file in the
+draft so the maintainer knows to look for that comment.
 | `agent` | | The host and model you are running as, e.g. "Claude Code (Opus 5.5)" | the same |
 
 One finding or discovery per issue. Content rules, whatever the sanitiser catches:

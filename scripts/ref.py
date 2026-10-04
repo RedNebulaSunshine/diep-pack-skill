@@ -16,6 +16,13 @@ or a higher level, so `## 7` includes its `### 7a` and `### 7b`.
     python ref.py api                     # compose.py / mechanics.py: every call, one line each
     python ref.py api trail jaws          # those calls in full (signature and docstring)
     python ref.py api trail --source      # ... and their code
+    python ref.py stock                   # the editor's 54 stock tanks: id, level, parts, size
+    python ref.py stock "Twin Flank" 14   # those tanks verbatim, by name or vanilla id
+    python ref.py stock --using raises    # only the stock tanks whose JSON has that field
+
+`stock` serves `references/stock-tanks.diep-pack`, the sandbox editor's own export of its
+roster (55 KB; never read it whole): a design that must keep a stock tank's mechanics exactly
+clones the printed JSON instead of rebuilding it from recipes.
 
 `api` reads the build library (`compose.py` with its `mechanics.py` presets, ~31k tokens as
 source) without loading it: the module docstrings and one line per public call, or named calls
@@ -175,6 +182,69 @@ def find(paths, term):
     return n > 0
 
 
+STOCK = os.path.join(REFS, "stock-tanks.diep-pack")
+VANILLA = os.path.join(REFS, "vanilla-tanks.md")
+ROW = re.compile(r"^\| (\d+) \| ([^|*]+?) \| (\d+|—) \| ([^|]*?) \|", re.M)
+
+
+def _vanilla():
+    """{name: (id, level, parents)} from the table in vanilla-tanks.md."""
+    with open(VANILLA, encoding="utf-8") as f:
+        text = f.read()
+    return {n.strip(): (int(i), lv, par.strip()) for i, n, lv, par in ROW.findall(text)}
+
+
+def _stock_tanks():
+    import json
+    with open(STOCK, encoding="utf-8") as f:
+        return json.load(f)["tanks"]
+
+
+def _parts(t):
+    b, s, u = len(t.get("barrels") or []), len(t.get("bodyShapes") or []), len(t.get("turrets") or [])
+    return " ".join(f"{n} {w}" for n, w in ((b, "barrels"), (s, "shapes"), (u, "turrets")) if n) or "no parts"
+
+
+def stock(queries, using=None):
+    """The editor's own stock roster (references/stock-tanks.diep-pack), one tank at a time.
+    No query: every tank, one line each. Names or vanilla ids: those tanks as compact JSON,
+    verbatim from the export (their pack ids are the export's; no tree links). --using FIELD:
+    only the tanks whose JSON contains that field name."""
+    import json
+    van = _vanilla()
+    tanks = _stock_tanks()
+    if using:
+        tanks = [t for t in tanks if f'"{using}"' in json.dumps(t, separators=(",", ":"))]
+        if not tanks:
+            print(f"ref.py: no stock tank uses {using!r}", file=sys.stderr)
+            return False
+    if not queries:
+        rows = sorted(tanks, key=lambda t: van.get(t["name"], (999,))[0])
+        for t in rows:
+            vid, lv, par = van.get(t["name"], ("?", t["minLevel"], "?"))
+            size = len(json.dumps(t, separators=(",", ":")))
+            print(f"{str(vid):>3}  {t['name']:<16} L{t['minLevel']:<3} {_parts(t):<32} {size:>5} B   from {par}")
+        print(f"\n{len(rows)} tanks. `ref.py stock <name|id> …` prints them verbatim; a clone that stands in for the "
+              f"stock tank sets editor.replaces to the id shown and the pack hides that id.")
+        return True
+    ok = True
+    for q in queries:
+        hit = [t for t in tanks if t["name"].lower() == q.lower()
+               or (q.isdigit() and van.get(t["name"], (None,))[0] == int(q))]
+        if not hit:
+            near = [t["name"] for t in tanks if q.lower() in t["name"].lower()]
+            print(f"ref.py: no stock tank called {q!r}" + (f"; did you mean {', '.join(near)}?" if near else ""),
+                  file=sys.stderr)
+            ok = False
+            continue
+        for t in hit:
+            vid, lv, par = van.get(t["name"], ("?", t["minLevel"], "?"))
+            print(f"# {t['name']}: vanilla id {vid}, level {t['minLevel']}, upgrades from {par}; {_parts(t)}. "
+                  f"To stand in for it: editor.replaces {vid} on the clone and {vid} in the pack's hidden list.")
+            print(json.dumps(t, separators=(",", ":"), ensure_ascii=False))
+    return ok
+
+
 API_FILES = ("compose.py", "mechanics.py")
 
 
@@ -258,6 +328,15 @@ def main(argv):
     if argv and argv[0] == "api":
         rest = [a for a in argv[1:] if a != "--source"]
         return 0 if api(rest, "--source" in argv) else 1
+    if argv and argv[0] == "stock":
+        rest, using = argv[1:], None
+        if "--using" in rest:
+            i = rest.index("--using")
+            if i + 1 >= len(rest):
+                sys.exit("ref.py: --using needs a field name")
+            using = rest[i + 1]
+            rest = rest[:i] + rest[i + 2:]
+        return 0 if stock(rest, using) else 1
     if argv and argv[0] in ("-h", "--help"):
         print(__doc__)
         return 0

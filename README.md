@@ -138,6 +138,7 @@ run `python scripts/check_update.py --force`.
 | `references/arena.md` | From a theme to the arena's shapes: the method, roles with their numbers (food, prize, hazard, wall, boss…), the ring layout and spawn weights. |
 | `references/recipes.md` | How each stock mechanic is written, with the real stock tanks' numbers. |
 | `references/vanilla-tanks.md` | Every vanilla tank's id, level and parents, and which ids the engine rejects. |
+| `references/stock-tanks.diep-pack` | The sandbox editor's own export of its 54 stock tanks, verbatim, served one tank at a time by `ref.py stock <name>` so a reskin or "stock tank plus …" keeps the real mechanics. |
 | `references/figurative.md` | Building a subject out of parts: primitives, the silhouette-first workflow, the motion map (what can move and how), lessons from player-built packs. |
 | `scripts/validate_pack.py` | Standard-library validator: unknown keys, bad references, the editor's import limits (counts, clamps, the three-collidable rule), and the lobby's import budget, ported from the editor's own check. `--summary` prints what the pack says. |
 | `scripts/render_pack.py` | Renders a pack the way the editor draws it (PNG, `--svg`, `--sheet`), verified to within a pixel against every stock tank and hundreds of player-built ones. |
