@@ -200,6 +200,28 @@ def _stock_tanks():
         return json.load(f)["tanks"]
 
 
+def stock_tank(query):
+    """(vanilla id, tank dict) for a stock tank by name (any case) or vanilla id: a deep copy of
+    the export's tank, which the caller may change. compose.Pack.from_stock and the validator's
+    cosmetic check share this lookup. ValueError, with near matches, when nothing fits."""
+    import copy
+    van = _vanilla()
+    tanks = _stock_tanks()
+    q = str(query).strip()
+    for t in tanks:
+        vid = van.get(t["name"], (None,))[0]
+        if t["name"].lower() == q.lower() or (q.isdigit() and vid == int(q)):
+            return vid, copy.deepcopy(t)
+    near = [t["name"] for t in tanks if q.lower() in t["name"].lower()]
+    raise ValueError(f"no stock tank called {q!r}" + (f"; did you mean {', '.join(near)}?" if near else ""))
+
+
+def stock_by_vanilla_id():
+    """{vanilla id: stock tank dict} for every stock tank the vanilla table names (not copies)."""
+    van = _vanilla()
+    return {van[t["name"]][0]: t for t in _stock_tanks() if t["name"] in van}
+
+
 def _parts(t):
     b, s, u = len(t.get("barrels") or []), len(t.get("bodyShapes") or []), len(t.get("turrets") or [])
     return " ".join(f"{n} {w}" for n, w in ((b, "barrels"), (s, "shapes"), (u, "turrets")) if n) or "no parts"

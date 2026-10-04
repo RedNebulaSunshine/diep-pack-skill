@@ -3,7 +3,7 @@ name: diep-pack
 description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor from a plain-English description: tanks (barrels, projectiles, drones, traps, missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings and cuts, a sidekick that follows, eggs that hatch) and into shapes that belong in its world, then pitches or builds them without being told. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a small line of tanks, or the arena's shapes. Also handles 'edit PACK: CHANGE'."
 license: MIT
 metadata:
-  version: "1.4.0"
+  version: "1.5.0"
   repository: "https://github.com/RedNebulaSunshine/diep-pack-skill"
   requires: "Python 3.8+; Pillow for PNG renders (optional)"
 ---
@@ -97,7 +97,8 @@ When needed:
   angle, offset, delay and multiplier, drone counts, projectile fields, stat caps, help text,
   zoom and scope. Clone it and add to it; never rebuild a stock tank from recipe excerpts and
   guesses. `ref.py stock` lists the roster, `ref.py stock --using raises` the tanks that use a
-  field. Never open the roster file itself (14k tokens).
+  field. Never open the roster file itself (14k tokens). In a design script,
+  `Pack.from_stock(name)` does the cloning (see "Stock clones and reskins" below).
 - `references/figurative.md` when the request names a subject with a shape (an animal,
   vehicle, object, "looks like …", "shaped like …") or asks for more than a handful of
   decorative parts: `ref.py figurative 1 2 3b 4 5` (building blocks, the silhouette-first
@@ -243,7 +244,13 @@ Tank, Dual-Barrel and Pellet Shot are 58, 60, 61 (all six confirmed in game).
   play: non-collidable body shapes, decorative barrels and turrets (`bulletType: "none"`,
   `projectile: -1`), parts on the projectiles; and each clone takes its stock tank's slot
   with `editor.replaces: N` plus `N` in the pack's `hidden` list, so the stock tank and its
-  reskin never both appear.
+  reskin never both appear. In a design script `pack.from_stock("Twin Flank")` returns a Tank
+  with all of that loaded verbatim (`as_name=` renames it; `level=` and `parents=` are the
+  pack's own) and does the `editor.replaces` and `hidden` bookkeeping; add rods, shapes,
+  turrets and projectile parts on top. `save()` prints a NOTE for each field that differs from
+  the stock tank in play, and `validate_pack.py <pack> --cosmetic` turns those into ERRORs: run
+  it on every reskin (`--twin 100001=Tank` names the twin of a reskinned starter, which has no
+  `editor.replaces`; `from_stock(..., children=[...])` writes `advancesInto`).
 - **Units**: radians; `delay` in reload periods (0.5 alternates); `lifetime` seconds;
   `spin`, `spinSpeed`, `invisibility.gain` per tick (25/s); `zoomMultiplier` < 1 = wider view.
 - **Consistency**: `bulletType` equals the target projectile's `base`; decorative barrels

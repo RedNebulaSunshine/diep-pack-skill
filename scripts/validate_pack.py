@@ -1,14 +1,26 @@
 #!/usr/bin/env python3
 """Validate a .diep-pack file against references/schema/.
 
-Usage:  python validate_pack.py <file.diep-pack> [--summary]
+Usage:  python validate_pack.py <file.diep-pack> [--summary] [--cosmetic] [--twin ID=STOCK ...]
 
 Exit status 1 if any ERROR is found; WARNINGs never fail the run. Standard library only.
 Every allowlist and rule below is taken from references/schema/; when the spec
 changes, change this file to match (section numbers are cited inline).
+
+A tank with editor.replaces N stands in for stock tank N, so each run diffs it against that
+stock tank (references/stock-tanks.diep-pack) and prints a NOTE listing what changes play
+(barrel angles, offsets, delays, multipliers and width, projectile fields, statsMaxLevel,
+speed, zoom, hull size, collidable shapes; "field: stock -> pack"). Decoration passes:
+bulletType none barrels, non-collidable shapes, turrets without barrels, projectile parts,
+colours, draw order, tree links (upgradesFrom, advancesInto). --cosmetic is for a reskin:
+every such difference is an ERROR, and so is a pack with nothing to compare. A reskinned
+starter that clones the base Tank has no editor.replaces (Tank cannot be hidden); name its
+twin with --twin 100001=Tank (the pack tank id, then a stock name or vanilla id).
 """
+import importlib.util
 import json
 import math
+import os
 import sys
 
 # --- allowlists (spec §1-§9) ------------------------------------------------------------
@@ -1053,6 +1065,168 @@ def check_upgrade_counts(rep, tanks, hidden):
                              f"limit of {MAX_UPGRADES}; import revised versions as a new pack")
 
 
+# --- cosmetic check: a stand-in tank against its stock twin -----------------------------------
+# Fields that only change the picture. Anything else a stock tank carries is play: barrel
+# angles, offsets, delays, multipliers and width (a bullet's radius is 21 x heightMultiplier x
+# bulletSizeMultiplier, spec 4), projectile fields, statsMaxLevel, speed, zoom, hull size, and
+# any shape with `collidable` (a non-collidable part is picture only, spec 5).
+
+COSMETIC_TANK = {"id", "name", "upgradesFrom", "advancesInto", "editor", "helpText"}   # tree links and labels
+TANK_PARTS = {"body", "projectiles", "barrels", "bodyShapes", "turrets"}
+COSMETIC_BARREL = {"color", "editor", "order", "muzzleScale", "invisible"}
+COSMETIC_SHAPE = {"color", "editor", "order", "aboveBody", "staysVisible"}
+COSMETIC_TURRET = {"color", "editor", "order", "baseSize", "aboveBody"}
+COSMETIC_BODY = {"color"}
+COSMETIC_PROJECTILE = {"name", "parts"}
+
+
+def _same(a, b):
+    if isinstance(a, bool) or isinstance(b, bool) or not (is_num(a) and is_num(b)):
+        return a == b
+    return math.isclose(a, b, rel_tol=1e-4, abs_tol=1e-4)
+
+
+def _diff(a, b, path=""):
+    """Lines for every field that differs between two JSON values, numbers within 1e-4."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        out = []
+        for k in sorted(set(a) | set(b)):
+            sub = f"{path}.{k}" if path else k
+            if k not in a:
+                out.append(f"{sub}: absent -> {json.dumps(b[k])}")
+            elif k not in b:
+                out.append(f"{sub}: {json.dumps(a[k])} -> absent")
+            else:
+                out += _diff(a[k], b[k], sub)
+        return out
+    if isinstance(a, list) and isinstance(b, list) and len(a) == len(b) and any(isinstance(x, (dict, list)) for x in a):
+        return [x for i, (p, q) in enumerate(zip(a, b)) for x in _diff(p, q, f"{path}[{i}]")]
+    if isinstance(a, list) and isinstance(b, list):
+        return [] if len(a) == len(b) and all(_same(p, q) for p, q in zip(a, b)) else [f"{path}: {json.dumps(a)} -> {json.dumps(b)}"]
+    return [] if _same(a, b) else [f"{path}: {json.dumps(a)} -> {json.dumps(b)}"]
+
+
+def _norm_barrel(b):
+    b = {k: v for k, v in b.items() if k not in COSMETIC_BARREL}
+    flags = {k: v for k, v in (b.get("flags") or {}).items() if k != "aboveBody"}
+    b.pop("flags", None)
+    if flags:
+        b["flags"] = flags
+    return b
+
+
+def _norm_turret(u):
+    return {k: v for k, v in u.items() if k not in COSMETIC_TURRET}
+
+
+def _norm_projectile(p):
+    q = {k: v for k, v in p.items() if k not in COSMETIC_PROJECTILE}
+    if "barrels" in q:
+        q["barrels"] = [_norm_barrel(b) for b in q["barrels"]]
+    if "turrets" in q:
+        q["turrets"] = [_norm_turret(u) for u in q["turrets"]]
+    solid = [_norm_shape(s) for s in p.get("parts") or [] if s.get("collidable")]
+    if solid:
+        q["collidable parts"] = solid
+    return q
+
+
+def _norm_shape(s):
+    return {k: v for k, v in s.items() if k not in COSMETIC_SHAPE}
+
+
+def _pair_off(stock, twin, what, describe):
+    """Exact matches cancel; what is left pairs in order and diffs, then extras and gaps."""
+    left = list(twin)
+    rest = []
+    for s in stock:
+        hit = next((i for i, t in enumerate(left) if not _diff(s, t)), None)
+        if hit is None:
+            rest.append(s)
+        else:
+            left.pop(hit)
+    out = []
+    for i, s in enumerate(rest):
+        if i < len(left):
+            out += [f"{what} {describe(s)}: {d}" for d in _diff(s, left[i])]
+        else:
+            out.append(f"{what} {describe(s)} removed")
+    out += [f"{what} added that plays: {describe(t)}" for t in left[len(rest):]]
+    return out
+
+
+def _describe_barrel(b):
+    return f"{b.get('bulletType')} @ angle {b.get('angle', 0):.3g} offset {b.get('offset', 0):.3g}"
+
+
+def _describe_shape(s):
+    return f"{s.get('sides')}-gon r{s.get('size', 25):g} at ({s.get('xOffset', 0):g}, {s.get('yOffset', 0):g})"
+
+
+def play_changes(tank, stock):
+    """Every difference between a tank and its stock twin that changes play, as short lines;
+    [] when the tank only adds decoration (bulletType none barrels, non-collidable shapes,
+    turrets without barrels, projectile parts) or changes colours, draw order, names and the
+    like. Both are tank dicts as the pack writes them."""
+    out = []
+    own = {k: v for k, v in tank.items() if k not in COSMETIC_TANK | TANK_PARTS}
+    base = {k: v for k, v in stock.items() if k not in COSMETIC_TANK | TANK_PARTS}
+    out += _diff(base, own)
+    out += [f"body.{d}" for d in _diff({k: v for k, v in stock.get("body", {}).items() if k not in COSMETIC_BODY},
+                                       {k: v for k, v in tank.get("body", {}).items() if k not in COSMETIC_BODY})]
+    sb = [_norm_barrel(b) for b in stock.get("barrels") or []]
+    tb = [_norm_barrel(b) for b in tank.get("barrels") or [] if b.get("bulletType") != "none" or
+          any(_diff(_norm_barrel(b), x) == [] for x in sb)]
+    out += _pair_off(sb, tb, "barrel", _describe_barrel)
+    solid = lambda lst: [_norm_shape(s) for s in lst or [] if s.get("collidable")]
+    out += _pair_off(solid(stock.get("bodyShapes")), solid(tank.get("bodyShapes")), "collidable shape", _describe_shape)
+    su = [_norm_turret(u) for u in stock.get("turrets") or []]
+    tu = [_norm_turret(u) for u in tank.get("turrets") or []]
+    for i, s in enumerate(su):
+        out += [f"turret {i}: {d}" for d in (_diff(s, tu[i]) if i < len(tu) else ["removed"])]
+    sp = [_norm_projectile(p) for p in stock.get("projectiles") or []]
+    tp = [_norm_projectile(p) for p in tank.get("projectiles") or []]
+    for i, s in enumerate(sp):
+        out += [f"projectile {i}: {d}" for d in (_diff(s, tp[i]) if i < len(tp) else ["removed"])]
+    return out
+
+
+def _load_ref():
+    here = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location("ref", os.path.join(here, "ref.py"))
+    ref = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ref)
+    return ref
+
+
+def _stock_id(query):
+    vid = _load_ref().stock_tank(query)[0]
+    if vid is None:
+        raise ValueError(f"{query!r} has no vanilla id")
+    return vid
+
+
+def stock_twins(pack, twins=None):
+    """[(label, tank, stock tank, differences)] for every tank with editor.replaces naming a
+    stock tank in references/stock-tanks.diep-pack, or [] when that roster is absent. `twins`
+    {pack tank id: vanilla id} adds tanks that cannot carry replaces: a clone of the base Tank
+    (0), which cannot be hidden, so a reskinned starter has no replaces to read."""
+    try:
+        roster = _load_ref().stock_by_vanilla_id()
+    except (OSError, ValueError, KeyError):
+        return []
+    out = []
+    for i, t in enumerate(pack.get("tanks") or []):
+        if not isinstance(t, dict):
+            continue
+        r = (t.get("editor") or {}).get("replaces") if isinstance(t.get("editor"), dict) else None
+        r = (twins or {}).get(t.get("id"), r)
+        if is_int(r) and r in roster:
+            label = f"tanks[{i}] {t.get('name')!r} (twin of {r} {roster[r]['name']})"
+            out.append((label, t, roster[r], play_changes(t, roster[r])))
+    return out
+
+
 # --- summary ----------------------------------------------------------------------------
 
 def describe_tank(t, pack_ids_to_names):
@@ -1173,8 +1347,31 @@ def main(argv):
         print("ERROR: top level must be a JSON object")
         return 1
     rep = validate(pack)
+    cosmetic = "--cosmetic" in argv[2:]
+    named = {}
+    rest = argv[2:]
+    for i, a in enumerate(rest):
+        if a == "--twin":
+            tid, _, stock = (rest[i + 1] if i + 1 < len(rest) else "").partition("=")
+            try:
+                named[int(tid)] = _stock_id(stock)
+            except ValueError as e:
+                print(f"ERROR --twin needs ID=STOCK (a pack tank id, a stock name or vanilla id): {e}")
+                return 1
+    twins = stock_twins(pack, named) if isinstance(pack.get("tanks"), list) else []
+    notes = []
+    for label, _, _, diffs in twins:
+        for line in diffs:
+            if cosmetic:
+                rep.error(label, f"plays differently from stock: {line}")
+            else:
+                notes.append(f"{label} differs from stock in play: {line}")
+    if cosmetic and not twins:
+        rep.error("pack", "--cosmetic: no tank has editor.replaces naming a stock tank (or a --twin), so there is nothing to compare")
     for w in rep.warnings:
         print("WARNING " + w)
+    for n in notes:
+        print("NOTE " + n)
     for e in rep.errors:
         print("ERROR " + e)
     tanks = pack.get("tanks") or []

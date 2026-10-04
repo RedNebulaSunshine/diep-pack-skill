@@ -776,7 +776,7 @@ class Tank(_mechanics()):
             else:
                 what = f"turret r={num(d.get('baseSize', TURRET_RADIUS))}"
                 where = f"at ({num(d.get('xOffset', 0))}, {num(d.get('yOffset', 0))})"
-            rows.append(f"  {d['order']:>3}  {kind:<6} {d.get('_name', ''):<22} {what + tags:<34} {where}")
+            rows.append(f"  {d.get('order', 0):>3}  {kind:<6} {d.get('_name', ''):<22} {what + tags:<34} {where}")
         return "\n".join(rows)
 
     def build(self, tank_id):
@@ -798,7 +798,9 @@ class Tank(_mechanics()):
         turrets = [d for k, d in self.parts if k == "turret"]
 
         def clean(d):
-            return {k: (num(v) if not isinstance(v, (dict, list)) else v) for k, v in d.items() if k != "_name"}
+            keep = bool(d.get("_stock"))      # a part cloned from a stock tank keeps its numbers unrounded
+            return {k: (num(v) if not keep and not isinstance(v, (dict, list)) else v)
+                    for k, v in d.items() if k not in ("_name", "_stock")}
 
         if barrels:
             t["barrels"] = [clean(b) for b in barrels]
@@ -871,6 +873,46 @@ class Pack:
     def tank(self, name, level=45, parents=(), tank_id=None):
         t = Tank(self, name, level, parents, tank_id)
         self.tanks.append(t)
+        return t
+
+    def from_stock(self, name, level=None, parents=(), as_name=None, replace=True, children=()):
+        """A Tank pre-filled from the editor's own stock roster (references/stock-tanks.diep-pack;
+        `name` is a stock tank's name or vanilla id, see `ref.py stock`): tank-level fields, body,
+        projectiles, barrels, body shapes and turrets are loaded verbatim, numbers unrounded, and
+        keep their indices, so presets, rod(), shape(), turret() and projectile parts go on top
+        as decoration. level defaults to the stock tank's, `as_name` renames it (default: the
+        stock name), parents are this pack's own tree links (upgradesFrom) and children the
+        tanks it advances into (advancesInto: stock ids or this pack's ids, e.g. a starter that
+        leads into a clone of Flank Guard). replace=True makes it stand in for
+        the stock tank: editor.replaces is the vanilla id and the id joins this pack's `hidden`
+        list, so the stock tank and its clone never both appear (not for the base Tank, which
+        cannot be hidden). Parts added later draw after the stock ones unless given an order.
+        save() lists every play-changing difference from the stock tank (validate_pack.py
+        --cosmetic turns those into errors)."""
+        ref = _load("ref")
+        vid, st = ref.stock_tank(name)
+        t = self.tank(as_name or st["name"], st["minLevel"] if level is None else level, parents)
+        struct = ("id", "name", "minLevel", "body", "projectiles", "barrels", "bodyShapes", "turrets", "upgradesFrom")
+        t.fields = {k: v for k, v in st.items() if k not in struct}
+        t.body = st["body"]
+        t.projectiles = st.get("projectiles", [])
+        highest = -1
+        for kind, key in (("barrel", "barrels"), ("shape", "bodyShapes"), ("turret", "turrets")):
+            for i, d in enumerate(st.get(key, [])):
+                d["_stock"] = True
+                d["_name"] = f"stock {kind} {i + 1}"
+                t._names.add(d["_name"])
+                t.parts.append((kind, d))
+                highest = max(highest, d.get("order", 0))
+        t._order = highest + 1
+        t.stock_id = vid
+        if children:
+            t.fields["advancesInto"] = list(children)
+        if replace and vid:
+            t.fields["editor"] = {"replaces": vid}
+            self.hidden = list(self.hidden or [])
+            if vid not in self.hidden:
+                self.hidden.append(vid)
         return t
 
     def custom_shape(self, name, sides, size, health, xp, color="#FFE869", touch_damage=2, touch_knockback=8,
@@ -1030,6 +1072,10 @@ class Pack:
             for e in rep.errors:
                 print("ERROR " + e)
             errors = len(rep.errors)
+            twins = {self.id_of(t): t.stock_id for t in self.tanks if getattr(t, "stock_id", None) is not None}
+            for label, _, _, diffs in mod.stock_twins(pack, twins):
+                for line in diffs:
+                    print(f"NOTE {label} differs from stock in play: {line}")
         if render and not errors:
             mod = _load("render_pack")
             out_dir = os.path.join(os.path.dirname(path), "renders")
