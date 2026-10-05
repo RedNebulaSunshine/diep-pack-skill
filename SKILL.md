@@ -1,9 +1,9 @@
 ---
 name: diep-pack
-description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor, from a plain-English description or from a picture (a hand-drawn sketch of the tank with arrows and notes, a drawing or photo of the subject, a screenshot of a tank): tanks (barrels, projectiles, drones, traps, missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings, a sidekick that follows, eggs that hatch), then pitches them in one question before building. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a line of tanks, or the arena, including when they attach or name an image and say make this or turn my drawing into a tank. Also handles edit PACK: CHANGE."
+description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor, from a plain-English description or from a picture (a sketch of the tank with arrows and notes, a drawing or photo of the subject, a screenshot of a tank): tanks (barrels, projectiles, drones, traps, homing missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings, a sidekick that follows, eggs that hatch), then pitches them in one question before building. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a line of tanks, or the arena, including when they attach an image and say make this or turn my drawing into a tank. Also handles edit PACK: CHANGE."
 license: MIT
 metadata:
-  version: "1.6.0"
+  version: "1.7.0"
   repository: "https://github.com/RedNebulaSunshine/diep-pack-skill"
   requires: "Python 3.8+; Pillow for PNG renders (optional)"
 ---
@@ -155,7 +155,9 @@ Then turn the description and the moves into a design sheet before writing JSON:
 - Hull: sides (0 circle), size, star, spin, colour.
 - Barrels: count, angles (convert degrees to radians, clockwise positive, front = 0),
   offset, length, width, muzzle, delay for alternation, decorative tips.
-- Projectiles: bullet / drone / trap; missile (bullet + `forceFire` sub-barrels, `color 27`),
+- Projectiles: bullet / drone / trap; missile (bullet + `forceFire` sub-barrels, `color 27`; a
+  heat seeker, a warhead, a proximity fuse or a cluster salvo with `missile()` and
+  `cluster_launcher()`, recipes §33),
   minion (drone + plain sub-barrels), swarm (`drone.idle: cruise`), necro (`raises` +
   `holdsRaised`, no projectiles), shotgun (`numBullets`), burst (`burst` + `firesOnDeath`),
   stationary shot (speed 0: trails, contact damage), decorated (`parts`) or armed (`turrets`),
@@ -487,6 +489,8 @@ Then:
 - `a hexagonal smasher that fades when still, spikes spinning fast`
 - `a two-tier line off Destroyer: a slow missile launcher at 45, then a version at 60 whose
   missiles explode into 8 bullets on right-click`
+- `a tank that fires heat-seeking missiles, and an upgrade whose missiles burst by themselves
+  near the target` (recipes §33: `missile()` with a seeker turret, then `proximity=True`)
 - `edit output/sniper-swarm.diep-pack: make the drones uncontrollable and double their count`
 - `a tank that looks like a dragonfly, top view, whose mandibles are the guns`
   (figurative: design sheet → `dragonfly.py` from the archetype → render → critique → deliver)

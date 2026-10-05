@@ -101,7 +101,7 @@ clamped (numbers) or dropped (lists), silently; the validator warns.
 | `drone.keepDistanceMin/Max` | number | | stand-off band measured **from the target** (Factory 300–800); ≤ 2000 | C |
 | `drone.repel` | bool | true | false = right click does not push it away | C |
 | `parts` | BodyShape[] | | decoration on the projectile, §8 schema, in a frame where the projectile's radius counts as 50; under its disc unless `aboveBody`; ≤ 32, three `collidable` at most | C (scale M) |
-| `turrets` | Turret[] | | auto-turrets on the projectile, §9 schema; sub-barrels ride them via `mountTurret`; ≤ 8 | H |
+| `turrets` | Turret[] | | auto-turrets on the projectile, §9 schema; sub-barrels ride them via `mountTurret`; a backward recoil engine on one steers a missile, a long-reload gun on a short-range one is a proximity fuse (recipes §33); ≤ 8 | H |
 | `flags.forceFire` | | | fires without input: spawners, missile thrusters, auto-fire guns, trail droppers | C |
 | `flags.holdsRaised` | | | Necromancer spawner: slots filled by raised polygons, plus one per Reload stat point; `projectile: -1`; tank barrels only | C |
 | `flags.firesOnSecondary` | | | right click instead of left | C |
@@ -124,7 +124,7 @@ clamped (numbers) or dropped (lists), silently; the validator warns.
 | `penetrationMultiplier` | number or [min,max] | 1 | projectile health; a range rolls per shot; ≤ 20 | C |
 | `speedMultiplier` | number or [min,max] | 1 | **0 with `initialVelocityMultiplier: 0` = stationary shot** (trails, damage points); ≤ 3 | C |
 | `initialVelocityMultiplier` | number or [min,max] | 1 | launch speed relative to cruise (Rocketeer 1.2, Shotgun 1.5); ≤ 3 | C |
-| `numBullets` | int | 1 | projectiles per shot, each with its own spread (Shotgun 4, Pellet Shot 10); 1–10 | C |
+| `numBullets` | int | 1 | projectiles per shot, each with its own spread (Shotgun 4, Pellet Shot 10); 1–10; acts on drone barrels too, though the editor's form hides it (a salvo of drone missiles, recipes §33) | C |
 | `bulletSizeMultiplier` | number or [min,max] | 1 | projectile radius; on a sub-barrel the child is parent × this ÷ 2 (M); polygon bullets draw 1.3×; ≤ 3; size counts squared in the room budget | C |
 | `reloadMultiplier` | number | 1 | higher = slower (Destroyer 4, spawners 3–6); ≤ 20 | C |
 | `delay` | number | 0 | phase in reload periods: 0.5 alternates a pair; 0.2/0.4 staggers a burst; past 1 it sits out whole cycles first (a rocket coasting); ≤ 10 | C |
@@ -179,7 +179,7 @@ theirs. Put complex projectiles on a **Reload cap of 0**, as a player-built pack
 |---|---|---|---|---|
 | `xOffset` / `yOffset` | number | 0 | mount position | C |
 | `angle` | number | 0 | rest direction | C |
-| `arc` | number | 0 = full circle | traverse limit either side of `angle`; **0 turns all the way round**; for a fixed pivot use 0.087; a narrow arc pointing away from enemies makes a pendulum that lags turns | C |
+| `arc` | number | 0 = full circle | traverse limit either side of `angle`; **0 turns all the way round**; for a fixed pivot use 0.087; a narrow arc pointing away from enemies makes a pendulum that lags turns; on a projectile's turret it is measured from the launch heading, so only 0 chases (recipes §33) | C |
 | `range` | number | 1700 | targeting range (side turrets 2000). **0 = no auto-targeting**: with `controllable` it rests at `angle` and follows the cursor only while fire is held (hands, jaws); give it an `arc` or it wanders. With `controllable` **and** a range (a player-built pack's limbs: 250, 750, or unset) it also turns toward enemies in range while idle: a living limb (recipe 27; Limb Lab 2026-09-28). Cursor-following needs the cursor inside the wedge | C |
 | `controllable` | bool | false | player aims it while firing; with a range it still tracks enemies when idle | C |
 | `aboveBody` | bool | true | drawn over the hull | C |

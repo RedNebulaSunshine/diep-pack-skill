@@ -115,8 +115,9 @@ run `python scripts/check_update.py --force`.
 ## What it can do
 
 - Weapon tanks from every stock mechanic: alternating and ring cannons, snipers, destroyers,
-  drones and swarms, necromancers, missiles, minions, trappers, smashers, stealth, auto
-  turrets, shotguns, bursts, right-click modes, scopes.
+  drones and swarms, necromancers, missiles (plain, heat-seeking, bursting on a proximity fuse,
+  or a cluster salvo that splits), minions, trappers, smashers, stealth, auto turrets, shotguns,
+  bursts, right-click modes, scopes.
 - Figurative tanks that look like something (a dragonfly, a crab, a snake, a starship, a
   crocodile) built from up to 32 body shapes and 32 barrels, using the tricks players have
   discovered: parts that pump like pistons, pendulum tails, jaws and hands that follow the

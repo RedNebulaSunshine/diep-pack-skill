@@ -259,6 +259,20 @@
         "The hen reads as a hen in the render (a body, a head with a beak and comb, as a top-down or profile figure), and the recap names each part by its editor name"
       ],
       "notes": "Added 2026-10-05 to test 'ask before embellishing' on a request with no picture."
+    },
+    {
+      "id": 21,
+      "prompt": "a tank that fires heat-seeking missiles, and an upgrade from it whose missiles blow up by themselves when they get near something",
+      "expected_output": "A two-tank line built with the guided-missile recipe: a missile whose rear engine rides a tracking turret, then the same with a warhead on a proximity-fuse turret; the recap explains the arc rule and the budget.",
+      "files": [],
+      "expectations": [
+        "The first tank's missile is a bullet with a forceFire rear recoil sub-barrel mounted (mountTurret) on an auto turret that has a range and an arc, drawn under the bullet (aboveBody false); not a plain Skimmer or a drone",
+        "The second tank's missile carries a second turret with a short range and a narrow arc whose invisible gun fires several bullets with a long reload (about 20), and the recap says it goes off by itself near a target",
+        "The recap or the one question tells the user that an arc-limited seeker steers only within a wedge measured from the launch direction, and that arc 0 with a short range is the chaser",
+        "The pack passes validate_pack.py, the summary's per-second figure is under 120 for both tanks, and the second tank upgrades from the first",
+        "A mechanical request: the reply does not bury it in character pitches; it asks only what the description cannot settle (level, parent, author)"
+      ],
+      "notes": "Added 2026-10-05 with the guided-missile recipe (recipes.md section 33, from a player's write-up). Mechanical, like eval 12/16."
     }
   ]
 }

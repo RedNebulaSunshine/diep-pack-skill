@@ -293,25 +293,30 @@ class Mechanics:
 
     # --- missiles, traps, bursts ---------------------------------------------------------------
     def missile_launcher(self, angle=0, offset=0, gap=0, thrusters="skimmer", name="missile launcher",
-                         base=True, right_click=False, **over):
+                         base=True, right_click=False, missile=None, **over):
         """Skimmer / Rocketeer / Glider launcher: a wide tube (with a flared base under it) firing a
         missile whose owner-coloured sub-barrels push it. thrusters: skimmer (spins, two sideways
-        thrusters), rocketeer (one rear thruster after a pause), glider (two rear-angled thrusters)."""
-        bullet = self.bullet()
-        thrust = dict(flags={"forceFire": True}, distance=70, heightMultiplier=0.9, bulletType="bullet",
-                      projectile=bullet, damageMultiplier=0.6, penetrationMultiplier=0.4, speedMultiplier=0.63,
-                      reloadMultiplier=0.35, lifetime=0.9, delay=0.5, color=27)
-        spec = dict(name="Missile", base="bullet", sides=-1)
-        if thrusters == "skimmer":
-            spec.update(spin=0.1, spinFlipsOnSecondary=True,
-                        barrels=[dict(thrust), dict(thrust, angle=math.pi)])
-        elif thrusters == "rocketeer":
-            spec["barrels"] = [dict(thrust, angle=math.pi, recoilMultiplier=3.8, spreadMultiplier=3, delay=7)]
-        elif thrusters == "glider":
-            spec["barrels"] = [dict(thrust, angle=2.513), dict(thrust, angle=3.770)]
-        else:
-            raise ValueError("thrusters must be skimmer, rocketeer or glider")
-        missile = self._proj(("missile", thrusters), **spec)
+        thrusters), rocketeer (one rear thruster after a pause), glider (two rear-angled thrusters),
+        seeker (a heat-seeking missile with the defaults of missile(), recipes.md §33). missile=i
+        fires a projectile you built with missile(...) (a warhead, a proximity fuse, a picture)."""
+        if missile is None and thrusters == "seeker":
+            missile = self.missile(name="Seeker missile")
+        if missile is None:
+            bullet = self.bullet()
+            thrust = dict(flags={"forceFire": True}, distance=70, heightMultiplier=0.9, bulletType="bullet",
+                          projectile=bullet, damageMultiplier=0.6, penetrationMultiplier=0.4, speedMultiplier=0.63,
+                          reloadMultiplier=0.35, lifetime=0.9, delay=0.5, color=27)
+            spec = dict(name="Missile", base="bullet", sides=-1)
+            if thrusters == "skimmer":
+                spec.update(spin=0.1, spinFlipsOnSecondary=True,
+                            barrels=[dict(thrust), dict(thrust, angle=math.pi)])
+            elif thrusters == "rocketeer":
+                spec["barrels"] = [dict(thrust, angle=math.pi, recoilMultiplier=3.8, spreadMultiplier=3, delay=7)]
+            elif thrusters == "glider":
+                spec["barrels"] = [dict(thrust, angle=2.513), dict(thrust, angle=3.770)]
+            else:
+                raise ValueError("thrusters must be skimmer, rocketeer, glider or seeker")
+            missile = self._proj(("missile", thrusters), **spec)
         stock = dict(penetrationMultiplier=4, speedMultiplier=0.63, bulletSizeMultiplier=1.2, reloadMultiplier=4,
                      lifetime=3.9, recoilMultiplier=3, knockbackMultiplier=0.1)
         if thrusters == "rocketeer":
@@ -323,6 +328,120 @@ class Mechanics:
         parts.append(self._gun(stock, angle, offset, gap, 80, BARREL_WIDTH * 1.7, 1, name, missile, right_click,
                                "Right click to fire missiles", over))
         return parts
+
+    # --- guided missiles: thrust, a seeker, a warhead, a proximity fuse, a cluster ---------------
+    # From a player's write-up and sample pack (2026-10-05), every number as they shipped it.
+    def missile(self, name="Missile", seeker=True, range=2000, arc=25, thrust=5, thrust_reload=0.5,
+                tail=(188, 2.4), warhead=0, warhead_spread=10, warhead_damage=1, warhead_lifetime=0.3,
+                proximity=False, fuse_range=400, fuse_arc=80, fuse_reload=20, right_click_burst=True,
+                sides=-1, color=None, parts=(), rods=(), **extra):
+        """A self-propelled bullet (recipes.md §33); returns the projectile index, to fire from
+        `missile_launcher(missile=...)` or any gun. Its engine is a rear sub-barrel ("engine")
+        with Always fire, recoil `thrust` (5) every `thrust_reload` (0.5), a harmless 0.2 s shot
+        that does nothing else (damage 0, speed 0, launch 0.5, size 0.8), drawn in the owner's
+        colour as a long tail (`tail` = length, width; (0, 0) hides it).
+        seeker=True (a heat seeker) puts an auto turret on the missile (`range` 2000, `arc` 25,
+        drawn under the bullet, no disc to see) and mounts the engine on it facing BACKWARD: the
+        turret turns toward the nearest target and the recoil pushes the missile at it. The
+        turret's arc is measured from the direction the missile was FIRED, not from its nose, so
+        only arc=0 (the full circle) can chase a target round behind it; give a chaser a short
+        range (it otherwise locks on to whatever is behind the tank at launch). Big arc with
+        short range, or small arc with long range: a wide, deep "target field" hits more ground
+        but picks a target worse.
+        warhead=N (an explosive missile) adds a short front sub-barrel ("warhead") that fires N
+        bullets (spread 10, speed 2, launch 1.5, lifetime 0.3, damage `warhead_damage`) once when
+        the missile dies: on hit, on expiry and, with right_click_burst, on right click.
+        proximity=True (a flak missile) moves the warhead on to a second, tighter turret
+        (`fuse_range` 400, `fuse_arc` 80) as an invisible auto gun with reload `fuse_reload` (20):
+        it fires by itself when something comes inside that field, and the long reload keeps it
+        to about one blast per missile. The fuse arc must stay narrow (80 or less): a wide one
+        misfires. right_click_burst then only ends the missile early (a self-destruct).
+        `parts` and `rods` draw a picture on the missile. Unguided: seeker=False."""
+        bullet = self.bullet()
+        turrets, barrels = [], list(rods)
+        engine = dict(flags={"forceFire": True}, angle=math.pi, distance=tail[0], heightMultiplier=tail[1],
+                      bulletType="bullet", projectile=bullet, damageMultiplier=0, penetrationMultiplier=0,
+                      speedMultiplier=0, bulletSizeMultiplier=0.8, reloadMultiplier=thrust_reload,
+                      spreadMultiplier=0, lifetime=0.2, recoilMultiplier=thrust, knockbackMultiplier=0,
+                      initialVelocityMultiplier=0.5, color=27, editor={"name": "engine"})
+        if tail[0] <= 0 or tail[1] <= 0:
+            engine.update(distance=5, heightMultiplier=0.2, invisible=True)
+        if seeker:
+            turrets.append(self.proj_turret(range=range, arc=arc, above=False, name="seeker"))
+            engine["mountTurret"] = 0
+        barrels.append(engine)
+        burst = {}
+        if warhead:
+            payload = dict(distance=27, bulletType="bullet", projectile=bullet, damageMultiplier=warhead_damage,
+                           speedMultiplier=2, numBullets=warhead, spreadMultiplier=warhead_spread,
+                           lifetime=warhead_lifetime, recoilMultiplier=0, knockbackMultiplier=0,
+                           initialVelocityMultiplier=1.5, editor={"name": "warhead"})
+            if warhead_damage == 1:
+                payload.pop("damageMultiplier")
+            if proximity:
+                turrets.append(self.proj_turret(range=fuse_range, arc=fuse_arc, above=False, name="fuse"))
+                payload.update(distance=68, startDistance=-81, mountTurret=len(turrets) - 1,
+                               reloadMultiplier=fuse_reload, invisible=True)
+                if right_click_burst:
+                    burst = {"onSecondary": True}
+            else:
+                payload["flags"] = {"firesOnDeath": True}
+                burst = {"onDestroyed": True, "onExpire": True}
+                if right_click_burst:
+                    burst = {"onSecondary": True, **burst}
+            barrels.append(payload)
+        e = {} if color is None else {"color": self.color(color)}
+        if burst:
+            e["burst"] = burst
+        if parts:
+            e["parts"] = list(parts)
+        if turrets:
+            e["turrets"] = turrets
+        e.update(extra)
+        return self.projectile(name=name, base="bullet", sides=sides, barrels=barrels, **e)
+
+    def cluster_launcher(self, angle=0, offset=0, gap=0, count=6, shards=4, split=90, reload=6, lifetime=3,
+                      name="cluster tube", right_click=False, tail=(200, 2.4), color=None, **over):
+        """A cluster of jointly targeted missiles (a player's design, recipes.md §33): one pull fires
+        `count` missiles from each of two tubes on the same spot; a tenth of a second out, each
+        missile's "splitter" (a sideways sub-barrel with recoil 20 and spread 20, +`split` degrees
+        on one tube's missiles and -`split` on the other's) kicks it off the line, so the salvo
+        fans out, and every missile bursts into `shards` bullets when it dies (hit, expiry or right
+        click). The missiles are DRONES, which is what lets a barrel fire several at once and
+        keeps the per-second budget at nothing: `numBullets`, spread 0 and recoil 0 are written
+        on the drone barrel directly (the editor's form hides those fields for a drone barrel,
+        but its import and export keep them and the game obeys them; in the editor, set them
+        while the projectile is a bullet, then switch it back to a drone). The splitters are
+        plain sub-barrels on a drone, which fire on the owner's click, so **hold left click**
+        after firing or the salvo never splits. Each tube: reload `reload` (6), `lifetime` (3),
+        two drones kept; `count` × 2 × (shards + 2) must stay under the 64-per-volley limit
+        (6 and 4 give 58). Returns the two tube dicts."""
+        bullet = self.bullet()
+        tubes = []
+        for k, sgn in enumerate((1, -1)):
+            payload = dict(distance=27, bulletType="bullet", projectile=bullet, speedMultiplier=2, numBullets=shards,
+                           spreadMultiplier=10, lifetime=0.3, recoilMultiplier=0, knockbackMultiplier=0,
+                           initialVelocityMultiplier=1.5, flags={"firesOnDeath": True}, editor={"name": "warhead"})
+            splitter = dict(angle=math.radians(sgn * split), distance=12, bulletType="bullet", projectile=bullet,
+                            damageMultiplier=0, penetrationMultiplier=0, speedMultiplier=0, bulletSizeMultiplier=0.2,
+                            reloadMultiplier=20, spreadMultiplier=20, lifetime=0.1, recoilMultiplier=20,
+                            knockbackMultiplier=0, initialVelocityMultiplier=0.2, delay=0.1, invisible=True,
+                            editor={"name": "splitter"})
+            barrels = [payload, splitter]
+            if tail[0] > 0 and tail[1] > 0:
+                barrels.append(dict(angle=math.pi, distance=tail[0], heightMultiplier=tail[1], bulletType="none",
+                                    projectile=-1, color=27, editor={"name": "tail"}))
+            e = {} if color is None else {"color": self.color(color)}
+            missile = self.projectile(name=f"Cluster missile {k + 1}", base="drone", sides=0,
+                                      burst={"onSecondary": True, "onDestroyed": True, "onExpire": True},
+                                      barrels=barrels, **e)
+            stock = dict(numBullets=count, reloadMultiplier=reload, spreadMultiplier=0, lifetime=lifetime,
+                         recoilMultiplier=0, knockbackMultiplier=0, numDrones=2, droneAggressiveCrashRadius=900)
+            tubes.append(self._gun(stock, angle, offset, gap, BARREL_LENGTH, BARREL_WIDTH, 1, f"{name} {k + 1}",
+                                   missile, right_click, "Right click to fire a cluster of missiles", over))
+        if "zoomMultiplier" not in self.fields:
+            self.set(zoomMultiplier=0.8)
+        return tubes
 
     def trap_launcher(self, angle=0, offset=0, gap=0, name="trap launcher", mega=False, projectile=None, **over):
         """Trapper: short launcher plus a flared tip mounted on it; traps live 24 s."""

@@ -77,6 +77,7 @@ the request changes; hand-written JSON copies the numbers from the sections.
 | 30 walkers and buildings | `d.walker()`, `d.sentry()`, `d.place(idx, right_click)` | a golem that walks by recoil; a placed ballista |
 | 31 random rolls | `lifetime=[a, b]`, `damageMultiplier=[a, b]`, `projectile=[a, b]` on any weapon | per-shot ranges and choices |
 | 32 class folders | `d.folder()` + `d.set(advancesInto=[…])` | picker nodes drawn as icons |
+| 33 guided missiles | `d.missile(seeker, range, arc, warhead, proximity)`, `d.missile_launcher(missile=i)` or `thrusters="seeker"`, `d.cluster_launcher(count, shards)` | a heat seeker (an engine on a tracking turret), a warhead that bursts, a proximity fuse, a salvo of drone missiles that splits |
 
 ## 1. Plain cannon (Tank)
 
@@ -645,3 +646,98 @@ useless to play, while its rods and shapes draw the icon the tree shows (a pitch
 a fang). The whole tree is wired with `advancesInto` (45 tanks) and `starters` names the six
 root folders. `d.folder()` sets the fields; draw the icon with rods and shapes as usual.
 **Confirmed in play** (the lab's Folder, 2026-09-28: it showed as a pitchfork with no visible hull, barely moved, had no stats to spend, and offered its child (Limb Lab) as an upgrade straight away).
+
+## 33. Guided missiles: an engine, a seeker, a warhead, a proximity fuse, a cluster salvo
+
+From a player's write-up and sample pack (2026-10-05); every number below is as they shipped
+it, and **confirmed in play by them** (the pack imports and validates here; the lab has not
+replayed it yet). Presets: `d.missile(...)` builds the projectile, `d.missile_launcher(missile=i)`
+or any gun fires it, `d.cluster_launcher()` builds the cluster salvo.
+
+```json
+Engine (every missile is a bullet; "projectile":1 is a plain bullet in the tank's list):
+ {"name":"Missile","base":"bullet","sides":-1,
+  "barrels":[{"flags":{"forceFire":true},"angle":3.1415927,"distance":188,"heightMultiplier":2.4,"bulletType":"bullet","projectile":1,
+              "damageMultiplier":0,"penetrationMultiplier":0,"speedMultiplier":0,"bulletSizeMultiplier":0.8,"reloadMultiplier":0.5,
+              "spreadMultiplier":0,"lifetime":0.2,"recoilMultiplier":5,"knockbackMultiplier":0,"initialVelocityMultiplier":0.5,"color":27}]}
+Seeker: the same plus "turrets":[{"range":2000,"arc":0.4363,"aboveBody":false}] and "mountTurret":0 on the engine
+Warhead: "burst":{"onSecondary":true,"onDestroyed":true,"onExpire":true} and a second sub-barrel
+ {"flags":{"firesOnDeath":true},"distance":27,"bulletType":"bullet","projectile":1,"speedMultiplier":2,"numBullets":10,
+  "spreadMultiplier":10,"lifetime":0.3,"recoilMultiplier":0,"knockbackMultiplier":0,"initialVelocityMultiplier":1.5}
+Proximity fuse: a second turret {"range":400,"arc":1.3963,"aboveBody":false} carrying the warhead as an auto gun instead:
+ {"distance":68,"startDistance":-81,"mountTurret":1,"invisible":true,"reloadMultiplier":20, ...the same shot, no firesOnDeath...}
+Launcher: a plain cannon {"bulletType":"bullet","projectile":0} in the sample; a Skimmer tube (section 8) costs a fifth of the budget
+Cluster missile (a DRONE; the second one has the splitter at -90 degrees):
+ {"name":"Cluster missile 1","base":"drone","sides":0,"burst":{"onSecondary":true,"onDestroyed":true,"onExpire":true},
+  "barrels":[{...the warhead above with "numBullets":4...},
+             {"angle":1.5707963,"distance":12,"bulletType":"bullet","projectile":0,"damageMultiplier":0,"penetrationMultiplier":0,
+              "speedMultiplier":0,"bulletSizeMultiplier":0.2,"reloadMultiplier":20,"spreadMultiplier":20,"lifetime":0.1,
+              "recoilMultiplier":20,"knockbackMultiplier":0,"initialVelocityMultiplier":0.2,"delay":0.1},
+             {"angle":3.1415927,"distance":200,"heightMultiplier":2.4,"bulletType":"none","projectile":-1,"color":27}]}
+Cluster tube (two of them, one per missile): {"bulletType":"drone","projectile":1,"numBullets":6,"reloadMultiplier":6,"spreadMultiplier":0,
+  "lifetime":3,"recoilMultiplier":0,"knockbackMultiplier":0,"numDrones":2,"droneAggressiveCrashRadius":900}
+```
+
+**The engine.** A missile is a bullet that pushes itself: a rear sub-barrel (`angle` π) with
+**Always fire**, a short reload (0.5) and high recoil (5; 3 or more; lower it to keep more of
+the launcher's own speed) firing a shot that does nothing (damage 0, speed 0, launch 0.5, size
+0.8) and vanishes in 0.2 s, which is what keeps the tank under the import budget. Drawn 188
+long and 2.4 wide in the owner's colour (`color` 27) it is also the missile's body: in the
+projectile's frame the bullet counts as a radius-50 hull, so the tail scales with the shot. A
+plain cannon firing such a missile costs 65/120 per second at reload 1 (the engine fires once per
+live missile); the Skimmer tube's reload 4 brings it to 21.
+
+**The seeker (a heat-seeking missile).** Put an auto turret on the missile, **drawn under the
+bullet** (`aboveBody: false`, no disc to see; the engine draws over it), facing 0, and mount the
+engine on it (`mountTurret: 0`) still at `angle` π: do not turn the turret round. The turret
+turns toward the nearest target inside its `range` and `arc` and the recoil pushes the missile at
+it. A manually guided missile is the same engine on a controllable drone instead. Two rules from
+the write-up:
+
+- **The arc is measured from the direction the missile was fired**, not from its nose as it
+  turns, so an arc-limited seeker can be escaped by moving round it. **Only `arc` 0 (the full
+  circle) can chase**, and a chaser needs a short `range`, or it locks on to whatever is behind
+  the tank at launch.
+- Arc and range together are the missile's **target field**. A large field (wide arc, long range)
+  covers more ground but picks a specific target worse; a small one is precise. Wide arc with
+  short range, or narrow arc with long range, work best; with a wide arc let the recoil, not the
+  launcher's speed, do the driving. The sample: 25 degrees of arc and 2000 of range.
+
+**The warhead (an explosive missile).** `burst` on the missile (right click, destroyed,
+expired: any or all) and a `firesOnDeath` sub-barrel that fires the payload as it dies. The
+cheap payload is **one short barrel with high spread and many bullets per shot** (10 at spread
+10); the consistent one is several short accurate barrels round the bullet, which can be
+`invisible` and placed anywhere, give a full-circle burst and cost more entities; spinning the
+bullet randomises either. Keep payload barrels **very short** (27 here) or they clip through
+and fire behind what the missile struck. The payload's launch speed and bullet speed set how
+fast the burst expands and its lifetime how far: fast (2 and 1.5) and brief (0.3 s) hits hard and
+costs little. Bullets or traps work for a burst; drones only for a right-click payload on a
+missile that stays alive (`flags.firesOnSecondary` on the payload barrel instead of `firesOnDeath`).
+The player who sent this could not make a payload mounted on the seeker turret itself work (as
+of 2026-10-05): keep it on the bullet, or on its own turret as below.
+
+**The proximity fuse (a flak missile).** A second, tighter turret (`range` 400, `arc` 80) with
+the payload as its **auto gun** (`mountTurret: 1`, invisible, 68 long starting at -81 so it
+sits across the missile, no `firesOnDeath`): a turret gun on a projectile fires by itself at
+targets in its field (section 23), so the missile goes off when something comes close. Its
+**reload (20) is the rate limiter**: without it the payload fires again and again for the
+missile's whole life; at 20 it is about one blast per missile. The fuse arc must not be wide
+(80 or less), or the firing goes wrong. `burst` still ends the missile (onSecondary = a
+self-destruct) but fires nothing, since nothing has `firesOnDeath`; the validator says so.
+
+**The cluster salvo (jointly targeted missiles).** Several missiles fired **at
+once** (nothing splits off a parent in flight: a spawned shot can carry nothing, section 5), each
+bursting into `shards` bullets. The missiles are **drones**, which keeps the per-second budget
+at nothing (drones count against the 96 and room, not per second) and lets one barrel fire a
+whole salvo: `numBullets` 6, `spreadMultiplier` 0 and `recoilMultiplier` 0 written on the drone
+barrel. The editor's form hides those three for a drone barrel, but its import reads them, its
+export writes them and the game obeys them (checked in the editor's code 2026-10-05); the
+write-up's trick is to set them while the projectile is a bullet, then switch it back to a
+drone. Each missile carries a **splitter**: a sideways sub-barrel (+90 degrees on one tube's
+missile, -90 on the other's) with recoil 20 and spread 20, a harmless 0.2-size 0.1 s shot, reload
+20, `delay` 0.1, so a tenth of a second out every missile is kicked off the line and the salvo
+fans out. The splitters have no flag: on a drone a plain sub-barrel fires on the owner's click
+(section 9), so **hold left click** after firing or the salvo never splits. The tubes need **spread
+0 and knockback 0** or the missiles drift apart before the splitters act. The limit is the
+**64 per volley**: two tubes x 6 missiles x (1 + 4 shards) is 60 of it (the validator prints
+58, counting the splitter shot too). Open: what `numDrones` 2 does when 6 are fired per shot.
