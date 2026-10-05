@@ -35,19 +35,23 @@ barrels") skips this, and even then offer one idea in the recap.
    cursor pivot; a magnet's pull, which the game cannot do, becomes scrap that orbits the tank
    and hits what it touches. A trait with no honest substitute is drawn only; say so.
 3. **Choose the default set**, one move per input so the tank is playable:
-   - **left click**: the main attack (usually the signature weapon);
+   - **left click**: the main attack (usually the signature weapon), always a shot the
+     player can see leave the tank. Hidden hits (`punch()`, contact damage) are *automatic*
+     moves, not a left-click weapon: a tester whose left click produced nothing visible
+     reported the tank as not firing at all, and read nothing else in the recap;
    - **right click**: the signature power or movement (a dash, a burst, a place, a push);
    - **automatic**: something alive without a click (companions, living limbs, a trail,
      an aura, an eye that watches);
-   - **the look**: the tell, drawn, and animated (§2 "Animate by default" in SKILL.md).
+   - **the look**: the tell, drawn; whether it moves is offered, not assumed (SKILL.md §2,
+     "Motion is a question").
    Keep one or two good ideas in reserve as alternatives. Check the part budget (32 shapes,
    32 barrels, 8 turrets, 96 pieces with the projectiles' parts) and the fire budget (Reload cap 0 for drawn projectiles, buildings
    and figure drones) before promising.
 4. **Pitch it** (SKILL.md §3): name each chosen move in one plain line ("Lightsaber: a glowing
    blade that swings toward your cursor and cuts on left click"), then the alternatives in
    one line each. The user can say "go" or swap a move. When the user has said to just build
-   it, or cannot be asked, build the default set and put the alternatives in the recap as
-   offers.
+   it, or cannot be asked, build the default set and nothing beyond it (no motion or
+   decoration the set does not need), and put the alternatives in the recap as offers.
 5. **Check before delivering** (§4 below).
 
 Prefer the surprising, true move to the safe one. "A hen that shoots bullets" is a failure

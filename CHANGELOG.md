@@ -5,6 +5,36 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.6.0 (2026-10-05)
+
+- The skill now works from a picture. Attach or name a hand-drawn sketch of the tank, a drawing
+  or photo of the subject, or a screenshot of a tank, and it reads the image itself (no new
+  script: the model's own vision does the looking). A new `references/from-image.md` says how:
+  transcribe every arrowed note on the drawing (words at the arrow's tail, the part at its head)
+  into a list before designing, treat crossed-out words as withdrawn and un-arrowed text as the
+  request itself, read the front from where the main barrel points, keep a side-view drawing as
+  drawn, measure parts against the drawn body as the hull, build the drawn shot's shape onto the
+  projectile, and compare the render to the drawing note by note. The read-back of the notes
+  leads the one question (SKILL.md §3) so a misread arrow is caught before a build, and the
+  recap ends with how each note was met. The drawing is the whole first build: the signature
+  moves, extra motion and flourishes the skill would normally add are offered in the question,
+  marked "not on your drawing", and built only on a yes (play testers of the first drafts said
+  "good idea, but ask first" about every unrequested addition). The view (as drawn, or from
+  above), the style (true to the drawing, or re-imagined as a cleaner, more anatomical
+  version) and anything a rule forces (team colour on a coloured shot) are asked too. `ref.py
+  image <§>` loads it by section. Tested on three pencil sketches: a one-barrel tank with colour
+  notes, a creature in profile with movement notes, and a saucer with only "gimme a UFO"
+  written under it, each play-tested in the editor.
+- The skill asks before it embellishes, for every request, not only drawings. "Animate by
+  default" and "more is better" were rules applied in the build; they are now lines in the one
+  question ("Motion and extras", SKILL.md §3) with a Recommended mark and a "still / plain, as
+  described" alternative, built only on a yes. A non-interactive run builds the recommended
+  moves and nothing beyond what they need. The maintainer's testers asked for this on every
+  tank that moved or grew unasked.
+- The default move set always gives left click a visible shot (`moves.md` §1 step 3). Hidden
+  hits such as a peck or a punch are automatic moves, not the main attack: a tester whose left
+  click produced nothing visible reported the tank as not firing at all.
+
 ## 1.5.0 (2026-10-04)
 
 - `Pack.from_stock(name)` in `compose.py` returns a Tank pre-filled from the stock roster: the
