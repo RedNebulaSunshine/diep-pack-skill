@@ -126,6 +126,12 @@ run `python scripts/check_update.py --force`.
   centre, with each shape's share of the spawns predicted before you import.
 - Upgrade-tree placement (level and parent tanks), multi-tank lines, total conversions.
 - Edit mode: change an existing pack without disturbing the rest.
+- **Draw it instead.** Photograph a sketch and attach it (or give its path): a circle for the
+  body, rectangles for the barrels pointing the way they fire, and notes with an arrow from
+  each note to the part it is about, words at the arrow's tail. Colours and movement words
+  work ("eyes follow", "wings flap", "spins"); so does a drawing of the subject with nothing
+  but "gimme a UFO" under it, or a photo of the real thing. The skill reads back what it saw
+  before it builds, so a misread arrow costs one line, not a rebuild.
 
 ## How it works
 

@@ -1,9 +1,9 @@
 ---
 name: diep-pack
-description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor from a plain-English description: tanks (barrels, projectiles, drones, traps, missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings and cuts, a sidekick that follows, eggs that hatch) and into shapes that belong in its world, then pitches or builds them without being told. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a small line of tanks, or the arena's shapes. Also handles 'edit PACK: CHANGE'."
+description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor, from a plain-English description or from a picture (a hand-drawn sketch of the tank with arrows and notes, a drawing or photo of the subject, a screenshot of a tank): tanks (barrels, projectiles, drones, traps, missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings, a sidekick that follows, eggs that hatch), then pitches them in one question before building. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a line of tanks, or the arena, including when they attach or name an image and say make this or turn my drawing into a tank. Also handles edit PACK: CHANGE."
 license: MIT
 metadata:
-  version: "1.5.0"
+  version: "1.6.0"
   repository: "https://github.com/RedNebulaSunshine/diep-pack-skill"
   requires: "Python 3.8+; Pillow for PNG renders (optional)"
 ---
@@ -26,6 +26,8 @@ host* (claude.ai, ChatGPT and other sandboxed chats, where the user cannot see y
 directory at all). In a chat host every file the user needs, the pack, its render, a feedback
 draft, must also go through the host's own file-delivery step, whatever it is that shows them
 a download or an image; a path on its own reaches no one. §5, §6 and §8 say where this matters.
+Pictures come the other way round: in a terminal host the user names a file and you read it
+with the image-capable file reader; in a chat host an attached image is already in front of you.
 
 ## 0. Once per session: is there a newer version of the skill?
 
@@ -57,6 +59,7 @@ python <skill>/scripts/ref.py recipes                 # a file's sections, each 
 python <skill>/scripts/ref.py recipes intro 5 25      # the text before §1, then §5 and §25
 python <skill>/scripts/ref.py figurative 7b           # a number, or a word in the heading ("dash")
 python <skill>/scripts/ref.py spec 7a                 # the spec, by its § number
+python <skill>/scripts/ref.py image 2 4               # from-image.md: reading a sketch's notes and geometry
 python <skill>/scripts/ref.py --find keepDistance     # every section that mentions a term
 python <skill>/scripts/ref.py api                     # compose.py and its presets, one line per call
 python <skill>/scripts/ref.py api trail jaws          # those calls in full
@@ -83,6 +86,12 @@ Always:
 
 When needed:
 
+- `references/from-image.md`, whole (~2k tokens), **first**, whenever the request includes a
+  picture or names one (a sketch of the tank with arrows and notes, a drawing or photo of the
+  subject, a screenshot of a tank): what kind of picture it is, how to transcribe its notes
+  before designing, how to read the front, view and scale from the drawing, and how to check
+  the render against it. The picture is a description in another form; everything below still
+  applies to what it describes.
 - `references/arena.md`, whole, when the request is about the map's shapes (food,
   crashers, bosses, "the arena", "what spawns", a whole themed pack or total conversion): the
   method that turns a theme into shapes, role templates, the ring layout and spawn weights.
@@ -116,6 +125,12 @@ When needed:
   marks Confirmed.
 
 ## 2. Interpret the request
+
+**With a picture, transcribe first** (`references/from-image.md` §2): list every note on the
+drawing with the part its arrow points to, decide the front and the view, and only then go
+on. The notes are requirements and the drawing is the whole first build; the moves below are
+worked out as usual but **offered, not built** (from-image.md §3), because someone who drew
+the tank has already decided what it is.
 
 **Start with the signature moves.** The user describes a subject; they rarely name the
 mechanics, because most people do not know the format can swing a blade, spin a web, lay an
@@ -157,23 +172,26 @@ Then turn the description and the moves into a design sheet before writing JSON:
   `hiddenShapes` through `references/arena.md` (built when the request is about the map,
   offered in one line after a themed tank).
 - Balance: scale `damageMultiplier` down as barrel count goes up, like the stock ring tanks.
-- **Animate by default**: give every tank some movement unless the request says not to. The
-  motion map in `figurative.md` §5 lists what moves: pistons (`animate`, with `forceFire` to
-  paddle without a click), pendulum pivots that swing on turns, cursor pivots, eyes and brows
-  that track, spinning parts, a trail. Brows, ears, tails, hands and legs should each do
-  something; mount details on an existing turret (brows on the eye) when the part budget is
-  tight.
-- **More is better** (play-tester feedback): spend the part budget rather than save it. More
-  parts, and more of them moving (pistons, pendulums, living limbs, spinning stars, tracking
-  eyes and brows), make a tank look exciting and powerful. Aim for contrast (a dark layer under
-  a bright one), variety in size (one big star, several small ones), points and stars rather
-  than plain circles, and aggressive shapes (spikes, horns, star auras, angry brows) that
-  suggest power. Small parts are mostly outline in game (fill shows only past ~15 radius), so
-  make accents big enough to read. Grow the show with the tier: each upgrade should look
-  visibly grander than its parent. The limit: the subject must still read. Spend the extra on
-  the head and the props; keep a trail or body recognisable with ordered patterns and static
-  marks (bands, dots, diamonds), not random stars, spinning shapes and particle clouds (a
-  play tester: "too much variety ... they no longer look like" the subject).
+- **Motion is a question, not a default.** Almost any part can move, and players love it:
+  the motion map in `figurative.md` §5 lists what moves (pistons with `animate` and
+  `forceFire` to paddle without a click, pendulum pivots that swing on turns, cursor pivots,
+  eyes and brows that track, spinning parts, a trail), and brows, ears, tails, hands and legs
+  could each do something. Work out what *could* move and put it in the one question (§3) as
+  one line, marked Recommended, with "still, as described" as the alternative. Build only
+  the motion the user asked for or accepted. The maintainer's play testers, reviewing tanks
+  whose legs, wings and lights moved unasked, said the same thing every time: good idea, just
+  ask. Mount details on an existing turret (brows on the eye) when the part budget is tight.
+- **Richness is a question too.** The part budget allows a grander look than most requests
+  describe: contrast (a dark layer under a bright one), variety in size (one big star,
+  several small ones), points and stars rather than plain circles, aggressive shapes (spikes,
+  horns, star auras, angry brows) that suggest power, and each tier visibly grander than its
+  parent. How much of that the user wants is theirs to set, so offer it in the question in one
+  line ("a grander look: … Recommended; or plain, as described") and build the first version
+  with what was asked and accepted. When they do want more: small parts are mostly outline in
+  game (fill shows only past ~15 radius), so make accents big enough to read; spend the extra
+  on the head and the props; keep a trail or body recognisable with ordered patterns and
+  static marks (bands, dots, diamonds), not random stars, spinning shapes and particle clouds
+  (a play tester: "too much variety ... they no longer look like" the subject).
 - **Branch the tree**: in a multi-tier line, offer two or three upgrades at every level rather
   than one path; a single path bores players. Shared children (a tank listing two parents in
   `upgradesFrom`) keep the count manageable: a lattice of 1, 2, 3, 3, 3 tanks per tier gives
@@ -207,11 +225,22 @@ and its phase (`delay`). Two systems on the same button fire together unless one
 Ask the user, in one message, for the things the description cannot settle (use the
 host's structured-question tool if it has one; otherwise plain text):
 
+- **What I read from your drawing** (any request with a picture), before everything else:
+  the note list of `from-image.md` §2, one short line per note, the front you read, the
+  view as a choice (as drawn, or from above), and the style as a choice: true to the
+  drawing, wobble and all (Recommended), or re-imagined as a cleaner, more anatomical
+  version of the same subject. A misread arrow costs a whole build; a line here costs
+  nothing. The moves that follow are offers marked "not on your drawing". The conversation
+  is the same as for any request: the drawing settles the first build, the question grows it.
 - **The moves** (any request with a subject or theme): the pitch of `moves.md` §1 step 4.
   One plain line per chosen move saying what the player will see and which button does it,
   marked Recommended, then one or two alternatives. Lead with this: it is the part the user
   cares about and could not have written themselves. Where two readings differ in kind (webs
   that snag versus webs that hurt), offer both.
+- **Motion and extras** (§2): one line for what would move on its own and how (Recommended,
+  or "still, as described"), and one for any flourish beyond the description (a grander
+  look, a trinket, a trail: Recommended, or "plain, as described"). These are the things the
+  skill used to add on its own; they are choices now because every tester asked for that.
 - **The arena** (a request about the map or a themed pack): the pitch of `arena.md` §1 step
   7, one plain line per shape (role, look, where it spawns), marked Recommended, and whether
   the vanilla shapes stay. For an arena-only request skip level and parent.
@@ -224,8 +253,12 @@ If the description implies a lineage ("an Overseer variant", "upgrade from Twin"
 inference first and mark it Recommended. For a multi-tank line ask only for the root; the
 rest chain from it by custom id. Do not ask anything else unless a genuine ambiguity would
 change what the tank *is*. If the user said to just build it ("surprise me", "go ahead"),
-or the host cannot ask (a non-interactive run), build the recommended moves, use level 45 off
-Tank, omit the author, and say so in the recap, with the alternatives offered there.
+or the host cannot ask (a non-interactive run), build the recommended moves (a subject with
+no moves is not a tank) and **nothing beyond what those moves need**: no extra motion, no
+flourish, no retuned numbers. Use level 45 off Tank, omit the author, and say so in the recap,
+with everything else offered there. For a request with a picture the fallback is narrower
+still: the drawing alone (plus one weapon if it drew none), every move an offer
+(from-image.md §3).
 
 Never wire to Ball (53) or IDs 56/57/59. Shotgun, Glider and Firework are 62, 63, 64; Auto
 Tank, Dual-Barrel and Pellet Shot are 58, 60, 61 (all six confirmed in game).
@@ -319,8 +352,10 @@ When the tank is meant to *look like something*, do not hand-type coordinates. F
    table, any `HIDDEN` parts (entirely under the hull) and the figure's span, and renders
    `./output/renders/<slug>-<tank>.png`.
 4. Read the PNG and critique it against the subject (silhouette, symmetry, hull swallowing
-   parts, seams, proportions). Fix the script and rerun, at most three passes. The script
-   is the source of truth; never patch the JSON by hand.
+   parts, seams, proportions). When the user drew the tank, critique it against their
+   drawing instead, note by note (`from-image.md` §5): they have already told you what they
+   expect to see. Fix the script and rerun, at most three passes. The script is the source
+   of truth; never patch the JSON by hand.
 
 Simple weapon tanks (a few barrels, no picture to match) can still be written as JSON
 directly, but render them too (step 5) before delivering.
@@ -394,7 +429,9 @@ Reply with, in this order:
    its button; level and parent(s); barrels by type; projectiles and what makes them special;
    any guessed or Medium/Low-confidence fields, named. Run the check of `moves.md` §4 and
    end with one or two ideas not built, as offers ("Want R2-D2 swapped for a Force leap?"). For a
-   figurative build add the render path and the part count, and name the design script.
+   figurative build add the render path and the part count, and name the design script. For a
+   request with a picture add **From your drawing**: each note and how it was met, the front
+   and view you read, and any substitute for something the format cannot draw (`from-image.md` §5).
 3. **Import**: "In the sandbox editor: Import, choose the file, *add to this pack*." An
    arena-only pack (shapes, no tanks) imports only this way; *import as new pack* refuses it. Mention
    that IDs are reassigned on import, so tree links to other packs are not possible. For a
@@ -460,6 +497,15 @@ Then:
   `trail()`, `jaws()`, `eye()`)
 - `an X-Wing with four wingtip lasers that converge on the cursor and a torpedo on right
   click` (`examples/x-wing/`: the script, the pack it builds, and its PNG and SVG renders)
+- a photo of a pencil sketch: a circle, one slanted barrel, a square drawn ahead of it, and
+  arrows labelled "barrel", "square projectiles yellow", "tank body red" (from-image.md: the
+  notes become the design sheet; front = where the barrel points; the read-back leads the
+  question)
+- a drawing of a creature in profile with notes "eyes follow", "wings flap", "legs wiggle"
+  and a crossed-out word (from-image.md: reproduce the side view as drawn, each verb from the
+  motion map, the struck word ignored)
+- a drawing of a flying saucer with "gimme a UFO" written under it and no arrows
+  (from-image.md + moves.md: the drawing is the look, the moves are imagined as for any bare subject)
 - any bare subject: `Luke Skywalker`, `a lawnmower`, `Cleopatra`, `an octopus`, `a
   firefighter`. The user names nothing else; the skill works out the moves (`moves.md` §1) and leads
   its one question with them.

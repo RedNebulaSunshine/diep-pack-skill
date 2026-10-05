@@ -190,6 +190,75 @@
         "Uses a low weight and high contact damage, and says what 'hits hard' means (20 kills a maxed tank in two touches)",
         "Does not bury the request under a themed pitch"
       ]
+    },
+    {
+      "id": 17,
+      "prompt": "Here's a sketch of a tank I want. Build it. The picture is at <lab>/sketch-to-diep-samples/simple.png",
+      "expected_output": "Reads the three arrowed notes back (barrel; square projectiles yellow; tank body red), builds one gun firing a Yellow square, a red body over the team hull, says front = where the barrel points, and does not invent extra weapons.",
+      "files": [],
+      "expectations": [
+        "Reads back all three notes from the drawing (barrel; square projectiles, yellow; tank body, red), each with the part it points to, before or inside the one question",
+        "The pack has exactly one firing gun barrel (bulletType bullet, projectile >= 0); decoration-only rods do not count",
+        "That barrel's projectile is a square: sides 4",
+        "The projectile's colour is Yellow (palette index 8)",
+        "The hull reads red (Salmon 9 or Crimson 24) over a team-coloured hull (same-size aboveBody cover), and the team-colour rule for the shots is put to the user as a question with options (a team mark on the shot, a team ring on the hull, or none) rather than silently built; non-interactive: met the least visible way and said so under Rules applied",
+        "The reply says which way is forward and that it comes from where the barrel points",
+        "The .diep-pack passes validate_pack.py and a render PNG of the tank was saved",
+        "Nothing the drawing does not show is built: no spin on the shot, no extra guns, no moves; any idea appears only under 'Not built, on offer'"
+      ],
+      "notes": "A photo of a pencil sketch: a circle, one barrel drawn at about 30 degrees, a square ahead of it, three arrowed notes. Image kept in the lab repo (sketch-to-diep-samples/), not in the skill."
+    },
+    {
+      "id": 18,
+      "prompt": "I drew this, make it into a diep tank: <lab>/sketch-to-diep-samples/detailed.png",
+      "expected_output": "Transcribes seven notes (orange beak, eyes follow, flappy wing, barrel with 'turret' crossed out, rotate, yellow body, wiggle legs), keeps the profile as drawn, animates wing and legs, tracking eyes, a spinning spindle shot, Orange beak on a Yellow body with team colour visible.",
+      "files": [],
+      "expectations": [
+        "Transcribes all seven notes (orange beak, eyes follow, flappy wing, barrel, rotate, yellow body, wiggle legs) with the part each points to",
+        "Treats the crossed-out word 'Turret' as withdrawn: the gun is a barrel and no auto-turret weapon is built for it",
+        "The eyes track: at least one turret with a white disc and a pupil part (eye()), or an equivalent tracking turret on the head",
+        "The wing moves: an animated part or a pendulum/piston pivot carrying the wing",
+        "The legs move: animated or pivoted leg parts",
+        "The main gun's projectile spins (spin != 0) and is a star or pointed shape, as drawn",
+        "The beak is Orange (16) and the body shows Yellow (8), with team colour still visible somewhere on the tank",
+        "The view is put to the user as a choice (as drawn in profile, or from above) in the one question; non-interactive builds the profile as drawn (legs below the body, head in front, beak forward)",
+        "The wing is drawn on top of the body in the render: an above-hull part created after the body cover, its root not swallowed",
+        "No moves beyond the notes are built (no hop, no egg, no peck); they appear only as offers marked not on the drawing",
+        "The .diep-pack passes validate_pack.py and a render PNG of the tank was saved",
+        "The recap lists each note and how it was met"
+      ],
+      "notes": "A pencil creature in profile with movement notes and one crossed-out word. Image in the lab repo."
+    },
+    {
+      "id": 19,
+      "prompt": "turn this into a tank <lab>/sketch-to-diep-samples/ambiguous.png",
+      "expected_output": "Reads 'Gimme a UFO' as the request, pitches UFO moves with buttons, keeps the dome, pilot, portholes and legs, names the view it chose and offers the other.",
+      "files": [],
+      "expectations": [
+        "Recognises the handwritten request 'gimme a UFO' as the request and names the tank as a UFO or flying saucer",
+        "Pitches at least two UFO signature moves with their buttons as offers marked not on the drawing (for example an abduction beam, a saucer spin, a death ray, a pilot that peeks out)",
+        "The build keeps the drawn features: at least three porthole circles, a dome or pilot above the body, and two landing legs",
+        "The view is put to the user as a choice (as drawn edge-on, or from above); non-interactive builds as drawn",
+        "The .diep-pack passes validate_pack.py and a render PNG of the tank was saved",
+        "Beyond the drawing, at most one weapon is built so the tank can fire, named as the one addition; no dash, no swinging or animated legs, no spinning rim, no tracking pilot unless the drawing asked",
+        "The recap describes the weapon's shot as it will look and fire in game (a disc of about the barrel's width, with its speed and rate in plain words), not as a 'thin fast bolt' the fields do not produce"
+      ],
+      "notes": "A pencil flying saucer, side view, with only the request written under it and no arrows. Image in the lab repo."
+    },
+    {
+      "id": 20,
+      "prompt": "a hen",
+      "expected_output": "One question that pitches the hen's moves (eggs that hatch, chicks, a peck) and offers motion and flourishes as choices with a plain alternative; non-interactive builds the recommended moves and nothing beyond them.",
+      "files": [],
+      "expectations": [
+        "Pitches signature hen moves with their buttons (eggs that hatch, chicks that follow, a peck, a flap or flutter), each marked Recommended or alternative",
+        "The one question has a 'Motion and extras' choice: what would move on its own (Recommended) versus 'still, as described', and a flourish line versus 'plain, as described'",
+        "The build contains the recommended moves and nothing beyond what they need: no decorative motion (pistons, pendulums, spinning parts, tracking eyes) unless a chosen move needs it, no trinkets or extra parts offered as flourishes",
+        "The recap says plainly that the recommended set was built because nobody could answer, and lists the motion and flourish options as offers",
+        "The .diep-pack passes validate_pack.py and a render PNG of the tank was saved",
+        "The hen reads as a hen in the render (a body, a head with a beak and comb, as a top-down or profile figure), and the recap names each part by its editor name"
+      ],
+      "notes": "Added 2026-10-05 to test 'ask before embellishing' on a request with no picture."
     }
   ]
 }

@@ -28,7 +28,7 @@ clones the printed JSON instead of rebuilding it from recipes.
 source) without loading it: the module docstrings and one line per public call, or named calls
 in full. Python 3.8+ standard library only.
 
-Files: quick (quick-reference), recipes, moves, arena, figurative, vanilla, spec (all of
+Files: quick (quick-reference), recipes, moves, arena, figurative, image (from-image), vanilla, spec (all of
 references/schema/), feedback, or any path. A query that is a number (`7`, `7a`, `§7a`)
 matches the section's number, including a `(§7)` in its heading; anything else matches a word
 or phrase in the heading, ignoring case. Exit 1 when a query matches nothing.
@@ -44,7 +44,7 @@ REFS = os.path.join(os.path.dirname(HERE), "references")
 ALIASES = {
     "quick": "quick-reference.md", "quick-reference": "quick-reference.md",
     "recipes": "recipes.md", "moves": "moves.md", "arena": "arena.md",
-    "figurative": "figurative.md", "vanilla": "vanilla-tanks.md",
+    "figurative": "figurative.md", "vanilla": "vanilla-tanks.md", "image": "from-image.md",
     "vanilla-tanks": "vanilla-tanks.md", "feedback": "feedback.md",
 }
 SPEC = ("spec", "schema")
