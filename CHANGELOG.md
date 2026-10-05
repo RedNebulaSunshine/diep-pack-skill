@@ -5,6 +5,30 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.7.0 (2026-10-05)
+
+- Guided missiles, from a write-up and a sample pack a player of the skill sent in (thank you).
+  `d.missile()` builds a self-propelled bullet: a rear engine barrel with Always fire and recoil
+  that pushes it, and, with `seeker=True` (the default), an auto turret under the bullet that the
+  engine rides, so the missile turns toward the nearest target and runs it down. The turret's arc
+  is measured from the direction the missile was fired, so `arc=0` with a short range is the
+  chaser and any other arc is a steering wedge. `warhead=N` adds a burst of N bullets when the
+  missile dies (on hit, expiry or right click); `proximity=True` moves that burst on to a second,
+  tighter turret with a long reload, so the missile goes off by itself when something comes
+  close. `d.missile_launcher(thrusters="seeker")` or `missile=i` fires one from the stock tube;
+  any gun can fire it. `d.cluster_launcher()` builds the player's cluster salvo: two tubes that each
+  fire six drone missiles at once with no spread, each missile kicked sideways a tenth of a second
+  later by a recoil splitter and bursting into four shards when it dies (hold left click, since
+  the splitters fire on the owner's click). `references/recipes.md` §33 has every number and the
+  write-up's rules (the target field, short payload barrels, the fuse reload as a rate limiter,
+  the 64-per-volley limit); `moves.md` and `figurative.md` §5 route "homes in", "bursts near the
+  target" and "a salvo that fans out" to them. The spec notes the arc rule (§9), the steering
+  engine and fuse gun (§5b) and that `numBullets`, spread and recoil act on drone barrels although
+  the editor's form hides them (its import and export carry them, read in its code). The validator
+  now explains a `burst` with a turret-mounted payload instead of calling it an explosion that
+  never happens. All of it is confirmed in the contributor's play and not yet replayed by the
+  maintainer; the lab's test pack rebuilds the sample to the number.
+
 ## 1.6.0 (2026-10-05)
 
 - The skill now works from a picture. Attach or name a hand-drawn sketch of the tank, a drawing

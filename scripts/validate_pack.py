@@ -413,10 +413,15 @@ def check_tank(rep, ti, t, pack_ids, hidden, shape_ids=()):
                 for k, v in p["burst"].items():
                     if not isinstance(v, bool):
                         rep.error(pw + ".burst", f"{k} must be a boolean")
-                if not any(bb.get("flags", {}).get("firesOnDeath") for bb in p.get("barrels", [])
-                           if isinstance(bb, dict)):
-                    rep.warn(pw, "burst is set but no sub-barrel has firesOnDeath, so setting it off "
-                                 "just ends the projectile with no explosion")
+                subs = [bb for bb in p.get("barrels", []) if isinstance(bb, dict)]
+                if not any(bb.get("flags", {}).get("firesOnDeath") for bb in subs):
+                    if any("mountTurret" in bb and bb.get("bulletType") != "none" for bb in subs):
+                        rep.warn(pw, "burst is set but no sub-barrel has firesOnDeath, so setting it off only "
+                                     "ends the projectile early; its turret gun fires on its own while it lives "
+                                     "(a proximity fuse, recipes §33), not at its death")
+                    else:
+                        rep.warn(pw, "burst is set but no sub-barrel has firesOnDeath, so setting it off "
+                                     "just ends the projectile with no explosion")
         if "drone" in p:
             if check_keys(rep, pw + ".drone", p["drone"], DRONE_KEYS):
                 dr = p["drone"]
