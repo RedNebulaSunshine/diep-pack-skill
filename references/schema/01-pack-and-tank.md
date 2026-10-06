@@ -95,7 +95,11 @@ prints the figures; `validate_pack.shape_budget()` is the port.
 its six bosses as the worked example (`references/stock-bosses.diep-pack`: Decade, Guardian, Summoner,
 Defender, Fallen Booster, Fallen Overlord, each with its tank). First played 2026-10-06: custom bosses
 spawned on `spawn_boss <name>` and from the Bosses tab, and were, at every stat 7 and scale 2.5, far
-too strong to study; the brains and `minDamageMultiplier` are still open (§13 item 22).** This
+too strong to study until their guns were turned down. **The simple brain with "Charge and ram"
+reacts only to a player inside its spot range and does not pursue** across the map (drift speed
+made no difference); **the bot brain**, in one test with "Keep distance", mostly wandered and rarely
+engaged (§13 item 22). The lobby's own bosses are simple-brain and mostly "Ignore them", so a boss is a
+landmark that fights what comes close, not a hunter.** This
 retires `arena.md`'s old rule that a pack cannot make a real boss: a pack now can.
 
 A boss is a **pack-level record that wraps a tank**. The tank is an ordinary tank of the pack (or a
@@ -139,7 +143,7 @@ game):
 | `scale` | number | [≤ 4, **2**] "Size": scales the tank and everything on it. Stock bosses 1.55 (Guardian), 1.72 (Summoner, Defender), 2.09 (the two Fallen), 2.87 (Decade). |
 | `damageOnTouch` | number | [≤ 1000, **10**] Body damage on contact. Fallen Booster 12. |
 | `knockbackMultiplier` | number | [0–3, **0.05**] Knockback it takes. |
-| `minDamageMultiplier` | number | **Not in the editor's form**; kept raw and written back (4 on five stock bosses, 6 on Fallen Booster). Presumably a floor on the damage its shots deal; a play question. |
+| `minDamageMultiplier` | number | **Not in the editor's form**; kept raw and written back (4 on five stock bosses, 6 on Fallen Booster). A floor on the damage its shots deal: three identical one-gun bosses (damage 1, reload 4) at 6 / absent / 1 took 11 / 16 / 14 shots to kill a maxed-regen Tank (play 2026-10-06), so **6 hurts clearly more**; 1 against absent is within the noise of regen. Write 4–6 for a boss whose shots must bite whatever its guns say. | Confirmed (6 bites); Medium (floor) |
 | `ai.brain` | enum | [**"simple"** \| `"bot"`] "Simple (drifts, rams, shoots)" or "Bot (plays like a player)": a sandbox bot's brain driving whatever guns the body has. Anything else reads as simple. |
 | `ai.botSkill` | number | [0–1, **0.7**] Bot brain: "how quickly it reacts, how well it aims and how well it dodges". |
 | `ai.botRetreat` | number | [0–0.9, **0**] Bot brain: "backs off to recover under this much health; 0 = fights to the death". |
