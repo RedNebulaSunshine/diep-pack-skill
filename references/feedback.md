@@ -84,7 +84,7 @@ needs to make the change goes in the issue.
 | Key | Required | Finding | Discovery |
 |---|---|---|---|
 | `title` | yes | The fact: "`<field or rule>`: <what the game does>, not <what the skill says>" | "New: <what it achieves> by <how>" |
-| `kind` | yes | `spec`, `validator`, `renderer`, `build-library`, `missing-move`, `skill-behaviour` or `other` | `discovery` |
+| `kind` | yes | `spec`, `validator`, `renderer`, `build-library`, `missing-move`, `skill-behaviour`, `boss` (a custom boss finding) or `other` | `discovery` |
 | `area` | | The file and section: `references/schema/04-barrels.md §7a`, `scripts/validate_pack.py` | Where it would belong: `recipes.md` (new section), `figurative.md §5`, `moves.md §2` |
 | `believed` | yes | What the skill says or did, quoted: the row, the number, the sentence | What the skill did or knew before: the limitation it works around, or "not in the references" |
 | `observed` | yes | What the game, the editor or the user saw, with the numbers | The technique: what it achieves, how it is built (fields, presets, numbers, order), why it works |

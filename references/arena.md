@@ -99,24 +99,23 @@ contact damage); a crasher with speed 3 and radius 2000 runs a player down; drif
 visibly fast. Chase radius is what makes a shape a crasher and what it costs the server ("the
 server searches this radius"): keep crashers to a modest share and the radius at 2000 or less.
 
-**A pack cannot make a real diep boss** (Confirmed 2026-09-29, editor code and play). Diep's
-bosses are AI tanks the server spawns on its own timer or from the admin panel (Guardian, Summoner,
-Defender, Fallen Booster, Fallen Overlord, a fixed list by name); nobody can pick or upgrade into
-one, and *Boss Control* lets a player take one over. The pack format has no bosses, and a Fallen
-boss stays stock even when the pack replaces and hides its tank, and the lobby refuses a pack tank
-that claims a stock id ("outside the custom range (>=100000)"). Bots are no way round it either
-(2026-09-29, the `bot-boss-test` test build): the admin's bots (`spawn_bot`, at most 8) level
-through the tree on their own and no admin action gives one a tank; with a pack tank as Tank's only
-upgrade, about 2 bots in 12 took it. The admin command `ban_tank <id>` works on **stock** ids: it
-stops bots and non-admin players alike (the user, 2026-09-29), so it cannot make a bot-only tank.
-On a **pack** id (100000 and up) it does nothing to anyone (bots and a player were still offered
-the tank from level 15 to 120): a bug the user reported to the game's developers. Once fixed,
-`ban_tank` on a boss-grade pack tank should keep it from players and bots while an admin can still
-take it by Switch Tank (untested: admins look exempt). So a pack's boss is one of two
-things, and the pitch says which: a **boss shape** (this row: huge, rare, one polygon, since a
-shape carries no parts), or a **boss-grade tank** someone plays (`baseHealth` up to 100000, heavy
-`baseBodyDamage`, `knockbackMultiplier` 0, a collidable body up to size 150, the whole figure
-toolkit), reached from the tree or by the sandbox's Switch Tank, never spawned by the server.
+**A pack can make a real boss since the editor update of 2026-10-06** (Confirmed (editor code);
+spec §1b; recipes §34; nothing played yet). Before that date the format had none: the server's bosses
+were a fixed list by name (Guardian, Summoner, Defender, Fallen Booster, Fallen Overlord), a Fallen
+boss stayed stock even when the pack replaced and hid its tank, and the lobby refused a pack tank
+claiming a stock id, so a pack's boss was a *boss shape* or a boss-grade tank somebody played
+(2026-09-29 tests; `ban_tank` on a pack id did nothing, reported to the developers). Now a pack
+carries `bosses[]`: records that wrap a tank of the pack (usually a boss-only copy, `editor.boss`)
+or a stock tank, drawn at `scale` 1–4, with a brain (simple: drifts, rams, shoots; bot: plays like a
+player), a behaviour when it spots a player, a spawn ring and a weight in the lobby's rotation, an
+announcement and a bounty; the lobby spawns them on its clock where Boss Auto-Spawn is on, and the
+console spawns one with `spawn_boss <name>`. The pack can also hide or reweight the five stock
+bosses. So a themed arena now has three kinds of landmark, and the pitch says which: a **boss
+shape** (this row: huge, rare, one polygon, since a shape carries no parts and no guns), a **boss**
+(a figure with guns, drones, turrets and a trail, AI-driven, on the rotation), or a **boss-grade
+tank** someone plays (`baseHealth` up to 100000 and the figure toolkit, reached from the tree). A
+necromancer boss needs `neutral=False` to raise the arena's shapes; a boss on the shapes' team
+(the default) is left alone by base defences.
 
 Score keeps the arena honest: score/health near 1 for food, well above 1 for prizes (the
 reward for finding one), below 1 for terrain and stings (they cost more than they pay).
@@ -143,6 +142,16 @@ Contact damage is how a theme says "don't touch": give it to what the fan would 
 - Leave no band empty of food, or that part of the map is dead. Bands may overlap (a hazard
   in the same ring as the food it guards); overlap is untested but the share model still
   gives the expected mix.
+- **The lobby's shape budget** (2026-10-06; spec §1a): over every spawning shape, custom and stock
+  alike, with share = weight ÷ total weight, **room** = Σ share × size² ÷ 3025 must stay under 5
+  ("Shapes take too much room: N squares each on average") and each shape's **crowding** =
+  2000 × share × π × size² ÷ (22300² × max(|outer² − inner²|, 0.01)) under 2 ("<name> crowds its
+  spawn ring: covered Nx"). Big shapes need small weights (a size-200 landmark at weight 0.005 is
+  fine; at weight 1 it is not), and a narrow ring multiplies crowding (a 0.5–0.55 ring is 20× tighter
+  than 0–0.4). `save()` prints both figures; the validator refuses in the lobby's words. The stock
+  arena is 1.0 of 5 and 0.18 of 2.
+- The sandbox's **largest arena is 28700** on a side (the full FFA size, down from 50000 before
+  2026-10-06); rings are fractions, so nothing in a pack changes with it.
 
 ## 4. Colour and outline
 

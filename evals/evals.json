@@ -273,6 +273,48 @@
         "A mechanical request: the reply does not bury it in character pitches; it asks only what the description cannot settle (level, parent, author)"
       ],
       "notes": "Added 2026-10-05 with the guided-missile recipe (recipes.md section 33, from a player's write-up). Mechanical, like eval 12/16."
+    },
+    {
+      "id": 22,
+      "prompt": "a boss for my pack: a giant clockwork owl that the arena spawns every half hour",
+      "expected_output": "One question that pitches the owl's moves and asks the boss questions (brain, behaviour when it spots a player, size against the stock bosses, the rotation), then a pack with a boss-only owl tank and a bosses[] record.",
+      "files": [],
+      "expectations": [
+        "Treats it as a custom boss (spec 1b, recipes 34): a bosses[] record wrapping a boss-only tank (editor.boss), not a boss shape or a playable boss-grade tank",
+        "The question offers a brain (simple or bot) and a behaviour in the editor's words (charge and ram / stop and shoot / keep distance / wander and shoot / ignore players), marked Recommended",
+        "Sizes it against the stock bosses (scale about 2-3, health in the thousands) and explains that every stat plays at level 7",
+        "Writes a boss rotation of 30 minutes (bossRotation.every 30) or says why not, and tells the user Boss Auto-Spawn must be on, with spawn_boss <name> as the console alternative",
+        "Clockwork: offers riding parts (orbit on a spinning gear) or fixed-rotation parts for the works, as a question, not a silent addition",
+        "The pack passes validate_pack.py; the recap names the boss's console name and calls the tank by its #C label"
+      ],
+      "notes": "Added 2026-10-06 with the editor update (custom bosses). Subject chosen to appear nowhere in the skill."
+    },
+    {
+      "id": 23,
+      "prompt": "make the Jamaican flag as a tank, exact colours please",
+      "expected_output": "A tank whose hull and parts use hex colours matching the flag (black, green, gold), with the palette mentioned as the alternative the user declined, and the team-colour rule kept.",
+      "files": [],
+      "expectations": [
+        "Uses hex colour strings (C.rgb or #rrggbb) for the flag's black, green and gold rather than the nearest palette swatches, because the user asked for exact colours",
+        "Keeps a team-coloured element (the spec 10 recipe: a team hull under a same-size cover, 27 details, or team-coloured shots) and says so",
+        "Does not use opacity, or offers it only as untested",
+        "Builds the saltire from rods or shapes with above=True in a sensible layer order and renders it",
+        "The pack passes validate_pack.py with no colour errors"
+      ],
+      "notes": "Added 2026-10-06 (exact colours, recipes 36)."
+    },
+    {
+      "id": 24,
+      "prompt": "a planet tank with three moons going round it",
+      "expected_output": "A tank whose moons ride a spinning planet part (mountPart via orbit()), with the orbit named as the editor update's riding-parts feature and its in-play status stated honestly.",
+      "files": [],
+      "expectations": [
+        "The moons are body shapes with mountPart pointing at the planet shape, and the planet has a spinSpeed, so the moons orbit (orbit() or shape(ride=...)); not drones and not plain shapes on a spinning hull unless the user asks",
+        "Says the riders have no hitbox and that the orbit is confirmed in the editor's code but not yet played (or marks it try)",
+        "Still gives the tank a visible left-click weapon and an idea for right click, since a subject with no moves is not a tank",
+        "The pack passes validate_pack.py and the render shows the moons round the planet"
+      ],
+      "notes": "Added 2026-10-06 (parts that ride parts, recipes 35)."
     }
   ]
 }

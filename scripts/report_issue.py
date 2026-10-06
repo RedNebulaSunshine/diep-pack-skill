@@ -39,7 +39,7 @@ from urllib.parse import quote, urlencode, urlsplit
 import skill_meta
 from skill_meta import SKILL_DIR
 TEMPLATE = "skill-feedback.yml"
-KINDS = ("spec", "validator", "renderer", "build-library", "missing-move", "skill-behaviour",
+KINDS = ("spec", "validator", "renderer", "build-library", "missing-move", "skill-behaviour", "boss",
          "discovery", "other")
 FIELDS = [  # (form field id, heading in a plain body), as labelled in the issue form
     ("kind", "Kind"), ("area", "Where in the skill"),

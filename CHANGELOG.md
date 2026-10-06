@@ -5,6 +5,36 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.8.0 (2026-10-06)
+
+- The editor update of 2026-10-06, read from the editor's own code and the game's export of its
+  six bosses, and played once the same day (confirmed: riders orbit and draw under their carrier,
+  fixed parts hold still, eight hitboxes collide, a projectile list hatches a mix, 27 parts on a
+  hex hull show the team colour, `spawn_boss` spawns a custom boss, an alpha byte draws the part
+  translucent, barrels riding a spinning plate turn with it and fire, `minDamageMultiplier` is a
+  damage floor that bites at 6, a simple-brain boss engages only within its spot range and a
+  bot-brain one mostly wandered; spec §13 item 22): **custom bosses** (a pack-level record wrapping a tank: `Pack.boss(tank,
+  brain=, behaviour=, idle=, size=, health=, xp=, ring=, weight=, message=, neutral=)` in the
+  editor's own words, `Design(boss=True)` / `Tank.boss_tank()` for a boss-only copy, `boss_rotation()`,
+  `hide_stock_bosses`, `hidden_bosses`; spec §1b, recipes §34; `render_pack.py --boss` draws a boss at
+  its scale beside a level-1 tank); **exact colours** (`"#rrggbb"` / `"#rrggbbaa"` on every colour
+  field, `C.rgb()`, `C.rgba()`, `C.alpha()`, the new **Fallen** swatch 17; spec §10, recipes §36); **parts that ride parts** (`shape(ride=…)`,
+  `rod(ride=…)`, `weapon(ride=…)`, `orbit()` for moons and wheels, `gun_ring()` for guns on a
+  spinning plate; chains four deep, riders have no hitbox and draw under the carrier; spec
+  §8, recipes §35); **fixed rotation** (`shape(fixed=True)`, `base()`, `compass()`); **eight
+  collidable parts** per tank (three before; still three per projectile); the lobby's new **shape
+  spawn budget** (room 5, crowding 2 per ring; errors in the lobby's words, printed by `save()`;
+  spec §1a, arena.md §3); a drone barrel with a **projectile list** (Decade's brood of eight) and the
+  game-only `forcedBulletColor` / `droneSides` keys (recipes §37, spec §7). The validator passes the
+  game's own 79-tank export with its bosses clean. Recaps call tanks by the editor's new **#C1,
+  #C2** labels; the delivery names Boss Auto-Spawn, `spawn_boss` and `set_boss`. The game's change
+  notes also fixed what skill 1.7.0 described as a hidden form (`numBullets`, spread and recoil on a
+  drone barrel are shown now), shapes past the 32nd losing their colour, and a duplicated mounted
+  barrel vanishing from the editor; the max sandbox arena is 28700.
+- Fixed while there: the renderer now draws colour 27 as the hull's own colour (the spec said so
+  since 2026-09-30; it drew player blue), and the budget-figures claim in spec §7a (`save()` prints
+  the validator's findings, `--summary` the figures).
+
 ## 1.7.0 (2026-10-05)
 
 - Guided missiles, from a write-up and a sample pack a player of the skill sent in (thank you).

@@ -25,7 +25,8 @@ import sys
 
 # --- allowlists (spec §1-§9) ------------------------------------------------------------
 
-PACK_KEYS = {"version", "name", "author", "tanks", "hidden", "shapes", "hiddenShapes", "starters"}
+PACK_KEYS = {"version", "name", "author", "tanks", "hidden", "shapes", "hiddenShapes", "starters",
+             "bosses", "hideStockBosses", "hiddenBosses", "bossRotation"}   # the last four: spec §1b (2026-10-06)
 TANK_KEYS = {
     "id", "name", "minLevel", "body", "baseHealth", "baseBodyDamage", "speedMultiplier",
     "zoomMultiplier", "scopeDistance", "knockbackMultiplier", "helpText", "raises",
@@ -38,20 +39,45 @@ PROJ_KEYS = {"name", "base", "sides", "star", "spin", "spinFlipsOnSecondary", "c
              "barrels", "drone", "parts", "turrets"}
 DRONE_KEYS = {"idle", "controllable", "keepDistanceMin", "keepDistanceMax", "repel"}
 BURST_KEYS = {"onSecondary", "onDestroyed", "onExpire"}
-FLAG_KEYS = {"forceFire", "holdsRaised", "firesOnSecondary", "firesOnDeath", "aboveBody"}
+FLAG_KEYS = {"forceFire", "holdsRaised", "firesOnSecondary", "firesOnDeath", "aboveBody",
+             "forceBulletColor", "canSpawnAllies"}   # the last two: in the editor's flag list, seen on stock bosses / unseen
 BARREL_KEYS = {
     "angle", "offset", "distance", "startDistance", "heightMultiplier", "muzzleScale",
     "bulletType", "projectile", "damageMultiplier", "penetrationMultiplier", "speedMultiplier",
     "initialVelocityMultiplier", "numBullets", "bulletSizeMultiplier", "reloadMultiplier", "delay",
     "spreadMultiplier", "lifetime", "recoilMultiplier", "knockbackMultiplier", "numDrones",
-    "droneAggressiveCrashRadius", "preSpawn", "droneControllable", "mountTurret", "mount", "color",
-    "order", "flags", "editor", "invisible",
+    "droneAggressiveCrashRadius", "preSpawn", "droneControllable", "mountTurret", "mount", "mountPart", "color",
+    "order", "flags", "editor", "invisible", "forcedBulletColor", "droneSides",
 }
 SHAPE_KEYS = {"sides", "size", "xOffset", "yOffset", "angle", "spinSpeed", "collidable", "aboveBody",
-              "color", "order", "editor", "star", "mountTurret", "mount", "staysVisible"}
+              "color", "order", "editor", "star", "mountTurret", "mount", "mountPart", "fixedRotation", "staysVisible"}
 TURRET_KEYS = {"xOffset", "yOffset", "angle", "arc", "range", "controllable", "aboveBody", "order", "editor",
                "baseSize", "color"}
-TANK_EDITOR_KEYS = {"replaces", "disabled", "advancesInto", "upgradesFrom"}   # the last two: a player-built pack's editor-only tree notes
+TANK_EDITOR_KEYS = {"replaces", "disabled", "boss", "advancesInto", "upgradesFrom"}   # the last two: a player-built pack's editor-only tree notes
+# custom bosses (spec §1b, read from the editor's code 2026-10-06): a pack-level record that wraps a tank
+BOSS_KEYS = {"id", "tank", "name", "spawnMessage", "neutralTeam", "claimable", "maxHealth", "xpBounty", "scale",
+             "damageOnTouch", "knockbackMultiplier", "ai", "spawn", "editor", "minDamageMultiplier"}
+BOSS_AI_KEYS = {"floatSpeed", "rotationChangeSpeed", "looksForward", "hoverAroundCenter", "aggressiveCrashRadius",
+                "aggressiveCrashSpeed", "minTargetLevel", "hoverRadius", "keepDistanceMin", "keepDistanceMax",
+                "wanderWhileFighting", "leadShots", "seesInvisible", "onlyPlayers", "brain", "botSkill", "botRetreat",
+                "directionChangeSpeed"}
+BOSS_SPAWN_KEYS = {"from", "to", "weight"}
+BOSS_ROTATION_KEYS = {"every", "first", "maxAlive", "minPlayers", "stockWeights"}
+BOSS_BRAINS = {"simple", "bot"}
+# (key, low, high): the editor clamps each on import; a value outside is kept at the edge
+BOSS_CLAMPS = {"maxHealth": (0, 1e6), "xpBounty": (0, 1e8), "scale": (0, 4), "damageOnTouch": (0, 1000),
+               "knockbackMultiplier": (0, 3)}
+BOSS_AI_CLAMPS = {"floatSpeed": (0, 5), "rotationChangeSpeed": (0, 2), "aggressiveCrashRadius": (0, 2000),
+                  "aggressiveCrashSpeed": (0, 5), "hoverRadius": (0, 5000), "keepDistanceMin": (0, 2000),
+                  "keepDistanceMax": (0, 2000), "minTargetLevel": (0, 120), "botSkill": (0, 1), "botRetreat": (0, 0.9)}
+BOSS_AI_BOOLS = ("looksForward", "hoverAroundCenter", "wanderWhileFighting", "leadShots", "seesInvisible", "onlyPlayers")
+MAX_BOSSES = 512
+MAX_BOSS_ID = 999999
+MAX_STOCK_WEIGHTS = 16
+# the lobby's five stock bosses: `hiddenBosses` and `bossRotation.stockWeights` name them; the editor
+# matches a name with its spaces removed and lower-cased, so "Fallen Booster" and "fallenbooster" both work
+STOCK_BOSSES = {"guardian": "Guardian", "summoner": "Summoner", "defender": "Defender",
+                "fallenbooster": "Fallen Booster", "fallenoverlord": "Fallen Overlord"}
 PART_EDITOR_KEYS = {"name", "group"}
 CUSTOM_SHAPE_KEYS = {"id", "name", "sides", "size", "maxHealth", "xpBounty", "damageOnTouch", "knockbackOnTouch",
                      "knockbackMultiplier", "color", "ai", "spawn", "editor"}
@@ -145,14 +171,31 @@ def check_keys(rep, where, obj, allowed):
 TEAM_SLOTS = {3: "blue", 4: "red", 5: "purple", 6: "green"}
 
 
-def check_color(rep, where, obj):
-    if "color" in obj:
-        c = obj["color"]
+HEX_COLOUR = "^#[0-9a-fA-F]{6}$"
+HEX_COLOUR_ALPHA = "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"   # the editor's colour parser (2026-10-06): #rrggbb or #rrggbbaa
+
+
+def is_hex_colour(c, alpha=True):
+    import re
+    return isinstance(c, str) and bool(re.match(HEX_COLOUR_ALPHA if alpha else HEX_COLOUR, c))
+
+
+def check_color(rep, where, obj, key="color"):
+    """A palette index 0-27 or, since the editor update of 2026-10-06, a hex string #rrggbb / #rrggbbaa
+    (spec §10). 28 and 29 import but draw grey. An alpha byte draws the part translucent in play
+    (Confirmed 2026-10-06)."""
+    if key in obj:
+        c = obj[key]
+        if is_hex_colour(c):
+            return
         if c in TEAM_SLOTS:
-            rep.warn(where, f"color {c} is the {TEAM_SLOTS[c]} team slot: in game it shows a team colour and follows "
+            rep.warn(where, f"{key} {c} is the {TEAM_SLOTS[c]} team slot: in game it shows a team colour and follows "
                             "the player's team after swaps (spec section 10); use 9/24 for red, 2/22 blue, 13/25 green, 26 purple")
         if not is_int(c) or not (0 <= c < PALETTE_SIZE):
-            rep.error(where, f"color must be a palette index 0-{PALETTE_SIZE - 1}, got {c!r}")
+            rep.error(where, f"{key} must be a palette index 0-{PALETTE_SIZE - 1} or a hex string like #4FA3FF "
+                             f"(optionally #rrggbbaa), got {c!r}")
+        elif c in (28, 29):
+            rep.warn(where, f"{key} {c} is not a colour the editor offers; it draws grey (#999999)")
 
 
 def check_num_or_range(rep, where, obj, key):
@@ -175,12 +218,21 @@ def projectile_indices(v):
     return None
 
 
-def check_barrel(rep, where, b, tank, n_projectiles, siblings, is_sub, sub_base=None, n_turrets=0):
+def check_barrel(rep, where, b, tank, n_projectiles, siblings, is_sub, sub_base=None, n_turrets=0, parts=()):
     """Validate one barrel. `siblings` is the array it lives in (for `mount`),
     `is_sub` says whether it sits on a projectile, `sub_base` that projectile's base,
-    `n_turrets` how many turrets its owner (tank or projectile) has for `mountTurret`."""
+    `n_turrets` how many turrets its owner (tank or projectile) has for `mountTurret`,
+    `parts` the owner's body shapes (or the projectile's parts) for `mountPart`."""
     if not check_keys(rep, where, b, BARREL_KEYS):
         return
+    check_mount_part(rep, where, b, parts, "barrel")
+    if "forcedBulletColor" in b:
+        check_color(rep, where, b, "forcedBulletColor")
+        if not (b.get("flags") or {}).get("forceBulletColor"):
+            rep.warn(where, "forcedBulletColor without flags.forceBulletColor: the stock bosses set both (spec §7); "
+                            "the editor keeps the pair raw, so the game decides what it means")
+    if "droneSides" in b and not is_int(b["droneSides"]):
+        rep.error(where, f"droneSides must be an int, got {b['droneSides']!r}")
     bt = b.get("bulletType")
     if bt not in BULLET_TYPES:
         rep.error(where, f"bulletType must be one of {sorted(BULLET_TYPES)}, got {bt!r}")
@@ -273,10 +325,62 @@ def check_barrel(rep, where, b, tank, n_projectiles, siblings, is_sub, sub_base=
         rep.error(where, "reloadMultiplier must be positive")
 
 
-def check_shape(rep, sw, s, n_turrets, n_barrels, what="body shape"):
-    """One body shape (tank) or part (projectile): same schema (spec §8)."""
+def check_mount_part(rep, where, d, parts, what):
+    """`mountPart: i` rides body shape i (spec §8, §9b; the editor's code 2026-10-06): the index must be a
+    shape of the same owner, not the part itself, not something it carries, and the chain at most 4 deep
+    ("Parts nest 4 deep at most"). `mount` wins over it, then `mountTurret`; a riding shape loses its
+    hitbox. `d` is the part or barrel, `parts` the owner's shape list, `what` "part" or "barrel"."""
+    if "mountPart" not in d:
+        return
+    mp = d["mountPart"]
+    if not is_int(mp) or mp < -1:
+        rep.error(where, f"mountPart must be an int index into the body shapes (-1 = none), got {mp!r}")
+        return
+    if mp < 0:
+        return
+    if "mount" in d or "mountTurret" in d:
+        rep.error(where, "mountPart together with mount/mountTurret: the editor keeps mount, then mountTurret, and "
+                         "clears mountPart (spec §8); a part rides one thing")
+        return
+    if not (0 <= mp < len(parts)):
+        rep.error(where, f"mountPart {mp} out of range ({len(parts)} body shapes); the editor clears it")
+        return
+    carrier = parts[mp]
+    if carrier is d:
+        rep.error(where, "mountPart refers to the part itself; the editor clears it")
+        return
+    # follow the carrier chain: a cycle or a chain over 4 deep is cleared on import
+    hops, seen, i = 0, set(), mp
+    while 0 <= i < len(parts) and isinstance(parts[i], dict):
+        if i in seen or parts[i] is d:
+            rep.error(where, f"mountPart {mp}: the chain loops back on this {what}; the editor clears it")
+            return
+        seen.add(i)
+        hops += 1
+        c = parts[i]
+        if "mount" in c or "mountTurret" in c:
+            break      # the chain's root rides a barrel or a turret; fine
+        i = c.get("mountPart", -1) if is_int(c.get("mountPart", -1)) else -1
+    if hops > 4:
+        rep.error(where, f"mountPart {mp}: {hops} parts deep; parts nest 4 deep at most (spec §8), the editor "
+                         "clears this one")
+    if what == "part" and d.get("collidable"):
+        rep.warn(where, "a part that rides another part is looks only: the editor clears its collidable flag on "
+                        "import (spec §8); put the hitbox on the carrier")
+
+
+def check_shape(rep, sw, s, n_turrets, n_barrels, what="body shape", parts=()):
+    """One body shape (tank) or part (projectile): same schema (spec §8). `parts` is the list it lives in,
+    for `mountPart`."""
     if not check_keys(rep, sw, s, SHAPE_KEYS):
         return
+    check_mount_part(rep, sw, s, parts, "part")
+    if "fixedRotation" in s:
+        if not isinstance(s["fixedRotation"], bool):
+            rep.error(sw, "fixedRotation must be a boolean")
+        elif s["fixedRotation"] and s.get("spinSpeed"):
+            rep.warn(sw, "fixedRotation with spinSpeed: the editor's Rotation choice is one of With the aim / Fixed / "
+                         "Spins, and a spinning part spins in world space anyway (spec §8)")
     if not is_int(s.get("sides")) or s["sides"] < 0:
         rep.error(sw, "sides must be an int >= 0 (always written)")
     if "size" in s and not is_num(s["size"]):
@@ -448,15 +552,17 @@ def check_tank(rep, ti, t, pack_ids, hidden, shape_ids=()):
             if not isinstance(subs, list):
                 rep.error(pw, "barrels must be a list")
                 subs = []
-            for bi, b in enumerate(subs):
-                check_barrel(rep, f"{pw}.barrels[{bi}]", b, t, len(projs), subs, True, p.get("base"), len(p_turrets))
         parts = p.get("parts", [])
+        if "parts" in p and not isinstance(parts, list):
+            rep.error(pw, "parts must be a list")
+            parts = []
+        if "barrels" in p:
+            for bi, b in enumerate(subs):
+                check_barrel(rep, f"{pw}.barrels[{bi}]", b, t, len(projs), subs, True, p.get("base"), len(p_turrets),
+                             parts)
         if "parts" in p:
-            if not isinstance(parts, list):
-                rep.error(pw, "parts must be a list")
-                parts = []
             for si, s in enumerate(parts):
-                check_shape(rep, f"{pw}.parts[{si}]", s, len(p_turrets), len(subs), "part")
+                check_shape(rep, f"{pw}.parts[{si}]", s, len(p_turrets), len(subs), "part", parts)
         if p_turrets:
             mounted = {b.get("mountTurret") for b in subs + parts if isinstance(b, dict) and "mountTurret" in b}
             for ui in range(len(p_turrets)):
@@ -472,16 +578,16 @@ def check_tank(rep, ti, t, pack_ids, hidden, shape_ids=()):
     if "turrets" in t and not isinstance(turrets, list):
         rep.error(where, "turrets must be a list")
         turrets = []
-    for bi, b in enumerate(barrels):
-        check_barrel(rep, f"{where}.barrels[{bi}]", b, t, len(projs), barrels, False, None, len(turrets))
-
-    # body shapes
     shapes = t.get("bodyShapes", [])
     if "bodyShapes" in t and not isinstance(shapes, list):
         rep.error(where, "bodyShapes must be a list")
         shapes = []
+    for bi, b in enumerate(barrels):
+        check_barrel(rep, f"{where}.barrels[{bi}]", b, t, len(projs), barrels, False, None, len(turrets), shapes)
+
+    # body shapes
     for si, s in enumerate(shapes):
-        check_shape(rep, f"{where}.bodyShapes[{si}]", s, len(turrets), len(barrels))
+        check_shape(rep, f"{where}.bodyShapes[{si}]", s, len(turrets), len(barrels), "body shape", shapes)
 
     # turrets
     for ui, u in enumerate(turrets):
@@ -517,6 +623,17 @@ def check_tank(rep, ti, t, pack_ids, hidden, shape_ids=()):
                                                 "both the vanilla tank and this one will show (spec section 1)")
             if "disabled" in t["editor"] and not isinstance(t["editor"]["disabled"], bool):
                 rep.error(where + ".editor", "disabled must be a boolean")
+            if "boss" in t["editor"] and not isinstance(t["editor"]["boss"], bool):
+                rep.error(where + ".editor", "boss must be a boolean")
+    if is_boss_tank(t):
+        # spec §1b: a boss-only tank is out of the tree and the starters, and plays with every stat at level 7,
+        # health regen 0, whatever statsMaxLevel says; the import budget rates it at max(cap, 7)
+        if t.get("upgradesFrom") or t.get("advancesInto"):
+            rep.warn(where, "editor.boss with tree links: a boss-only tank is dropped from the class tree, so "
+                            "upgradesFrom / advancesInto do nothing (spec §1b)")
+        if isinstance(sml, list) and len(sml) == 8 and sml != [7] * 8:
+            rep.warn(where, f"editor.boss with statsMaxLevel {sml}: a boss plays with all stats at level 7 and health "
+                            "regen 0 regardless (the editor's Stat levels panel is read-only on a boss, spec §1b)")
 
     # holistic warnings
     has_raises = bool(raises)
@@ -574,7 +691,8 @@ MAX_TURRETS = 8           # per tank, and per projectile
 MAX_PROJECTILES = 16
 MAX_TANKS = 512
 MAX_CUSTOM_SHAPES = 256
-MAX_COLLIDABLE_PARTS = 3  # further collidable parts become drawing-only
+MAX_COLLIDABLE_PARTS = 8  # per tank (was 3 before 2026-10-06); further collidable parts become drawing-only
+MAX_COLLIDABLE_PROJ_PARTS = 3   # per projectile
 MAX_PACK_BYTES = 921600   # 900 KB of the exported JSON; the lobby refuses a bigger pack
 # (key, max) clamps: the editor keeps min(value, max). Negative values pass unless noted.
 TANK_CLAMPS = {"baseHealth": 100000, "baseBodyDamage": 10000, "speedMultiplier": 3, "knockbackMultiplier": 3}
@@ -645,7 +763,7 @@ def check_import_limits(rep, where, t):
                              "a plain default shot of the barrel's type, so those parts, guns and colour are lost "
                              "(spec §5b)")
 
-    def shape_limits(sw, lst):
+    def shape_limits(sw, lst, cap):
         n = 0
         for si, s in enumerate(lst or []):
             if not isinstance(s, dict):
@@ -654,17 +772,19 @@ def check_import_limits(rep, where, t):
             _clamped(rep, w, s, "sides", 18)
             _clamped(rep, w, s, "xOffset", 800, -800)
             _clamped(rep, w, s, "yOffset", 800, -800)
-            if s.get("collidable"):
+            rides = is_int(s.get("mountPart", -1)) and s.get("mountPart", -1) >= 0 and "mount" not in s \
+                and "mountTurret" not in s
+            if s.get("collidable") and not rides:
                 n += 1
-                if n == MAX_COLLIDABLE_PARTS + 1:
-                    rep.warn(sw, f"more than {MAX_COLLIDABLE_PARTS} collidable parts: the editor turns every one "
-                                 "after the third into a drawing-only part")
-            _clamped(rep, w, s, "size", 150 if s.get("collidable") and n <= MAX_COLLIDABLE_PARTS else 300)
+                if n == cap + 1:
+                    rep.warn(sw, f"more than {cap} collidable parts: the editor turns every one after the "
+                                 f"{'eighth' if cap == 8 else 'third'} into a drawing-only part (spec §8)")
+            _clamped(rep, w, s, "size", 150 if s.get("collidable") and not rides and n <= cap else 300)
 
     for bi, b in enumerate(t.get("barrels") or []):
         if isinstance(b, dict):
             barrel_limits(f"{where}.barrels[{bi}]", b)
-    shape_limits(f"{where}.bodyShapes", t.get("bodyShapes"))
+    shape_limits(f"{where}.bodyShapes", t.get("bodyShapes"), MAX_COLLIDABLE_PARTS)
     for pi, p in enumerate(projs):
         pw = f"{where}.projectiles[{pi}]"
         _clamped(rep, pw, p, "sides", 18)
@@ -678,7 +798,7 @@ def check_import_limits(rep, where, t):
         for bi, b in enumerate(p.get("barrels") or []):
             if isinstance(b, dict):
                 barrel_limits(f"{pw}.barrels[{bi}]", b, sub_of=pi)
-        shape_limits(pw + ".parts", p.get("parts"))
+        shape_limits(pw + ".parts", p.get("parts"), MAX_COLLIDABLE_PROJ_PARTS)
 
 
 # --- the lobby's import budget (spec §7a) ------------------------------------------------------
@@ -753,14 +873,15 @@ def _editor_barrel(b):
     }
 
 
-def _editor_parts(lst):
+def _editor_parts(lst, cap=MAX_COLLIDABLE_PARTS):
     out, n = [], 0
     for s in (lst or [])[:MAX_BODY_SHAPES]:
         s = s if isinstance(s, dict) else {}
-        col = bool(s.get("collidable"))
+        rides = is_int(s.get("mountPart", -1)) and s.get("mountPart", -1) >= 0 and "mount" not in s and "mountTurret" not in s
+        col = bool(s.get("collidable")) and not rides     # a riding part loses its hitbox on import
         if col:
             n += 1
-            col = n <= MAX_COLLIDABLE_PARTS
+            col = n <= cap
         out.append({"collidable": col, "size": min(_num(s.get("size"), 300, 25), 150 if col else 300)})
     return out
 
@@ -773,7 +894,7 @@ def _editor_projectile(p):
         "sides": min(round(sides), 18) if is_num(sides) and sides >= 0 else -1,
         "burst": bool(burst.get("onSecondary") or burst.get("onDestroyed") or burst.get("onExpire")),
         "barrels": [_editor_barrel(x) for x in (p.get("barrels") or [])[:MAX_BARRELS] if isinstance(x, dict)],
-        "parts": _editor_parts(p.get("parts")),
+        "parts": _editor_parts(p.get("parts"), MAX_COLLIDABLE_PROJ_PARTS),
         "turrets": (p.get("turrets") or [])[:MAX_TURRETS],
     }
 
@@ -805,6 +926,8 @@ def import_budget(t):
     caps = t.get("statsMaxLevel")
     cap = caps[RELOAD_STAT_INDEX] if isinstance(caps, list) and len(caps) == 8 else 7
     cap = max(0, min(12, round(cap))) if is_num(cap) else 7
+    if is_boss_tank(t):
+        cap = max(cap, 7)               # a boss plays every stat at 7 (spec §1b)
     period = 15 * 0.914 ** cap          # ticks per shot at reload 1 with Reload maxed
 
     def shots(b, n):                    # per second, 25 ticks a second, whole ticks only
@@ -886,9 +1009,6 @@ def import_budget(t):
             "drones": math.ceil(tot["drones"] - 1e-9), "volley": volley, "pieces": n_pieces}
 
 
-HEX_COLOUR = "^#[0-9a-fA-F]{6}$"
-
-
 def check_custom_shape(rep, sw, s):
     """A pack-level custom polygon (spec §1a): an arena shape, not a tank part."""
     import re
@@ -918,8 +1038,10 @@ def check_custom_shape(rep, sw, s):
         if k not in s:
             rep.warn(sw, f"{k} is omitted: the editor fills in {dflt} on import (spec §1a); write it to be explicit")
     c = s.get("color")
-    if c is not None and not (isinstance(c, str) and re.match(HEX_COLOUR, c)):
-        rep.error(sw, f"custom shape color is a hex string like #FFE869 (not a palette index), got {c!r}")
+    if c is not None and not is_hex_colour(c):
+        rep.error(sw, f"custom shape color is a hex string like #FFE869 (not a palette index), got {c!r}; "
+                      "the editor falls back to #ffe869 for anything else (2026-10-06)")
+
     if "ai" in s and check_keys(rep, sw + ".ai", s["ai"], CUSTOM_SHAPE_AI_KEYS):
         for k, v in s["ai"].items():
             if not is_num(v):
@@ -945,6 +1067,172 @@ def check_custom_shape(rep, sw, s):
             rep.error(sw + ".editor", "disabled must be a boolean")
         if "spawnWeight" in e and not is_num(e["spawnWeight"]):
             rep.error(sw + ".editor", "spawnWeight must be a number")
+
+
+def is_boss_tank(t):
+    return isinstance(t, dict) and isinstance(t.get("editor"), dict) and t["editor"].get("boss") is True
+
+
+def boss_console_name(name):
+    """How the console names a boss: the name lower-cased with its spaces removed (editor code)."""
+    return str(name).replace(" ", "").lower()
+
+
+def check_boss(rep, bw, b, pack_ids, tanks_by_id):
+    """One `bosses[]` record (spec §1b, the editor's import code 2026-10-06)."""
+    if not check_keys(rep, bw, b, BOSS_KEYS):
+        return
+    bid = b.get("id")
+    if bid is not None and (not is_int(bid) or not (0 <= bid <= MAX_BOSS_ID)):
+        rep.error(bw, f"id must be an int 1-{MAX_BOSS_ID} (0 or absent = the editor assigns one), got {bid!r}")
+    tank = b.get("tank")
+    if not is_int(tank):
+        rep.error(bw, "tank is required: a tank id in this pack, or a stock id below 100000 (a giant stock Octo Tank)")
+    elif tank >= 100000:
+        if tank not in pack_ids:
+            rep.error(bw, f"tank {tank} is not a tank in this pack; the editor's export drops a boss whose tank is missing")
+    elif tank not in STOCK_IDS:
+        rep.error(bw, f"tank {tank} is neither a tank in this pack nor a stock tank id (spec §11)")
+    name = b.get("name")
+    if name is not None and not isinstance(name, str):
+        rep.error(bw, "name must be a string")
+    elif not name:
+        rep.warn(bw, "no name: the editor shows \"Boss\" and the console cannot spawn it by name; the export also "
+                     "overwrites the record's name with its tank's name, so name the tank")
+    if "spawnMessage" in b and not isinstance(b["spawnMessage"], str):
+        rep.error(bw, "spawnMessage must be a string (\"\" = the default announcement)")
+    for k in ("neutralTeam", "claimable"):
+        if k in b and not isinstance(b[k], bool):
+            rep.error(bw, f"{k} must be a boolean")
+    for k, (lo, hi) in BOSS_CLAMPS.items():
+        if k in b:
+            if not is_num(b[k]):
+                rep.error(bw, f"{k} must be a number")
+            elif not lo <= b[k] <= hi:
+                rep.warn(bw, f"{k} {b[k]:g} is outside what the editor keeps ({lo:g} to {hi:g}); clamped on import")
+    if "minDamageMultiplier" in b and not is_num(b["minDamageMultiplier"]):
+        rep.error(bw, "minDamageMultiplier must be a number (the stock bosses carry 4, Fallen Booster 6; the editor keeps "
+                      "it raw and its meaning is a play question, spec §1b)")
+    ai = b.get("ai")
+    if ai is not None and check_keys(rep, bw + ".ai", ai, BOSS_AI_KEYS):
+        for k, (lo, hi) in BOSS_AI_CLAMPS.items():
+            if k in ai:
+                if not is_num(ai[k]):
+                    rep.error(bw + ".ai", f"{k} must be a number")
+                elif not lo <= ai[k] <= hi:
+                    rep.warn(bw + ".ai", f"{k} {ai[k]:g} is outside what the editor keeps ({lo:g} to {hi:g}); clamped on import")
+        for k in BOSS_AI_BOOLS:
+            if k in ai and not isinstance(ai[k], bool):
+                rep.error(bw + ".ai", f"{k} must be a boolean")
+        if "brain" in ai and ai["brain"] not in BOSS_BRAINS:
+            rep.error(bw + ".ai", f"brain must be one of {sorted(BOSS_BRAINS)} (anything else reads as simple), got {ai['brain']!r}")
+        if "directionChangeSpeed" in ai and not is_num(ai["directionChangeSpeed"]):
+            rep.error(bw + ".ai", "directionChangeSpeed must be a number (0.02 on every stock boss; kept raw by the editor)")
+        if is_num(ai.get("keepDistanceMin")) and is_num(ai.get("keepDistanceMax")) \
+                and ai["keepDistanceMin"] > ai["keepDistanceMax"]:
+            rep.warn(bw + ".ai", "keepDistanceMin is above keepDistanceMax; the editor swaps them")
+        radius = ai.get("aggressiveCrashRadius", 0)
+        if is_num(radius) and radius <= 0 and (ai.get("keepDistanceMax") or ai.get("wanderWhileFighting")
+                                               or is_num(ai.get("aggressiveCrashSpeed"))):
+            rep.warn(bw + ".ai", "aggressiveCrashRadius 0 (or absent) means the boss ignores players and only its turrets "
+                                 "and drones fight; the keep-distance, wander and crash-speed settings then do nothing "
+                                 "(the editor's New-boss form writes 1500)")
+    sp = b.get("spawn")
+    if sp is not None and check_keys(rep, bw + ".spawn", sp, BOSS_SPAWN_KEYS):
+        for k in ("from", "to"):
+            if k in sp:
+                if not is_num(sp[k]):
+                    rep.error(bw + ".spawn", f"{k} must be a number")
+                elif not 0 <= sp[k] <= 1:
+                    rep.warn(bw + ".spawn", f"{k} {sp[k]:g} is outside 0-1 (a fraction of the map, 0 = centre); clamped")
+        if "weight" in sp:
+            if not is_num(sp["weight"]):
+                rep.error(bw + ".spawn", "weight must be a number")
+            elif not 0 <= sp["weight"] <= 100:
+                rep.warn(bw + ".spawn", f"weight {sp['weight']:g} is outside 0-100; clamped (0 = only by command)")
+    if "editor" in b and not isinstance(b["editor"], dict):
+        rep.error(bw, "editor must be an object")
+    t = tanks_by_id.get(tank)
+    if t is not None and not is_boss_tank(t):
+        rep.warn(bw, f"its tank {t.get('name')!r} is also a playable tank (no editor.boss): fine, but a boss copy "
+                     "(editor.boss: true) keeps it out of the class tree and plays it at level 7")
+    if t is not None and (t.get("raises") or any((bb.get("flags") or {}).get("holdsRaised")
+                                                 for bb in t.get("barrels") or [] if isinstance(bb, dict))) \
+            and b.get("neutralTeam", True):
+        rep.warn(bw, "a necromancer boss on the shapes' team (neutralTeam true) cannot raise shapes; set neutralTeam false")
+
+
+def check_boss_rotation(rep, r):
+    if not check_keys(rep, "bossRotation", r, BOSS_ROTATION_KEYS):
+        return
+    for k, lo, hi in (("every", 1, 1440), ("first", 0, 1440), ("maxAlive", 1, 6), ("minPlayers", 0, 100)):
+        if k in r:
+            if not is_num(r[k]):
+                rep.error("bossRotation", f"{k} must be a number")
+            elif not lo <= r[k] <= hi:
+                rep.warn("bossRotation", f"{k} {r[k]:g} is outside {lo}-{hi}; clamped on import"
+                         + (" (minutes)" if k in ("every", "first") else ""))
+    sw = r.get("stockWeights")
+    if sw is not None:
+        if not isinstance(sw, dict):
+            rep.error("bossRotation", "stockWeights must be an object {boss name: weight 0-100}")
+        else:
+            if len(sw) > MAX_STOCK_WEIGHTS:
+                rep.warn("bossRotation", f"{len(sw)} stockWeights: the editor keeps the first {MAX_STOCK_WEIGHTS}")
+            for k, v in sw.items():
+                if boss_console_name(k) not in STOCK_BOSSES:
+                    rep.warn("bossRotation", f"stockWeights key {k!r} is not one of the five stock bosses "
+                                             f"({', '.join(STOCK_BOSSES.values())})")
+                if not is_num(v):
+                    rep.error("bossRotation", f"stockWeights[{k!r}] must be a number")
+                elif not 0 <= v <= 100:
+                    rep.warn("bossRotation", f"stockWeights[{k!r}] {v:g} is outside 0-100; clamped")
+
+
+# the lobby's shape spawn budget (the editor's code, 2026-10-06; spec §1a): over every spawning shape,
+# custom ones not disabled plus stock ones not hidden, with share = weight / total weight
+SHAPE_ROOM_LIMIT = 5        # sum(share x size^2 / 3025) <= 5: "Shapes take too much room"
+SHAPE_CROWD_LIMIT = 2       # per shape 2000 x share x pi x size^2 / (22300^2 x max(|to^2 - from^2|, 0.01)) <= 2
+STOCK_SHAPE_SPAWN = {       # (size, weight, from, to) of each stock shape, as the editor's copies write them
+    "square": (55, 1, 0.2, 1), "triangle": (55, 0.2, 0.2, 1), "pentagon": (75, 0.05, 0.2, 1),
+    "big_pentagon": (200, 0.005, 0, 0.1), "big_crasher": (55, 0.02, 0, 0.2), "small_crasher": (35, 0.1, 0, 0.2),
+    "hexagon": (100, 0.004, 0.2, 1),
+}
+
+
+def shape_budget(shapes, hidden_shapes=()):
+    """{'room': float, 'crowded': [(name, crowding)], 'rows': [(name, share, room, crowding)]} the way the
+    editor computes it before loading a pack. Custom shapes with editor.disabled, and stock shapes in
+    `hidden_shapes`, do not count."""
+    rows = []
+    for kind, (size, w, lo, hi) in STOCK_SHAPE_SPAWN.items():
+        if kind not in hidden_shapes:
+            rows.append((kind, size, w, lo, hi))
+    for s in shapes or []:
+        if not isinstance(s, dict) or (s.get("editor") or {}).get("disabled"):
+            continue
+        sp = s.get("spawn") if isinstance(s.get("spawn"), dict) else {}
+        w = sp.get("densityMultiplier", 0.01)
+        size = s.get("size", 50)
+        rows.append((s.get("name") or "Shape", size if is_num(size) else 50, w if is_num(w) else 0,
+                     sp.get("radiusMin", 0) if is_num(sp.get("radiusMin", 0)) else 0,
+                     sp.get("radiusMax", 1) if is_num(sp.get("radiusMax", 1)) else 1))
+    total = sum(max(0, r[2]) for r in rows)
+    out = {"room": 0.0, "crowded": [], "rows": []}
+    if total <= 0:
+        return out
+    for name, size, w, lo, hi in rows:
+        if w <= 0:
+            continue
+        share = w / total
+        room = share * size * size / 3025
+        ring = 22300 * max(abs(hi * hi - lo * lo), 0.01) * 22300
+        crowd = 2000 * share * math.pi * size * size / ring
+        out["room"] += room
+        out["rows"].append((name, share, room, crowd))
+        if crowd > SHAPE_CROWD_LIMIT:
+            out["crowded"].append((name, crowd))
+    return out
 
 
 def validate(pack):
@@ -1006,6 +1294,7 @@ def validate(pack):
                     rep.error("pack", f"hidden id {h} is not a known vanilla ID")
             # hidden works alone (spec 1, Confirmed 2026-09-26: a total conversion left only its own tanks)
     pack_ids = [t.get("id") for t in tanks if isinstance(t, dict)]
+    tanks_by_id = {t.get("id"): t for t in tanks if isinstance(t, dict)}
     if "starters" in pack:
         st = pack["starters"]
         if not isinstance(st, list) or not all(is_int(x) for x in st):
@@ -1014,8 +1303,63 @@ def validate(pack):
             for x in st:
                 if x not in STOCK_IDS and x not in pack_ids:
                     rep.error("pack", f"starters id {x} is neither a vanilla ID nor a tank in this pack")
+                elif is_boss_tank(tanks_by_id.get(x)):
+                    rep.warn("pack", f"starters id {x} is a boss-only tank (editor.boss): the editor drops it from the starters")
             if not st:
                 rep.warn("pack", "starters is empty: nothing to spawn as")
+    # custom bosses (spec §1b)
+    bosses = pack.get("bosses", [])
+    if "bosses" in pack:
+        if not isinstance(bosses, list):
+            rep.error("pack", "bosses must be a list")
+            bosses = []
+        if len(bosses) > MAX_BOSSES:
+            rep.error("pack", f"{len(bosses)} bosses: the editor keeps only {MAX_BOSSES} and drops the rest")
+        names, ids = {}, set()
+        by_tank = {}
+        for bi, b in enumerate(bosses):
+            bw = f"bosses[{bi}]" + (f" {b.get('name')!r}" if isinstance(b, dict) and isinstance(b.get("name"), str) else "")
+            check_boss(rep, bw, b, set(pack_ids), tanks_by_id)
+            if isinstance(b, dict) and is_int(b.get("tank")) and b["tank"] in tanks_by_id:
+                by_tank.setdefault(b["tank"], []).append(b.get("name"))
+            if isinstance(b, dict):
+                if is_int(b.get("id")) and b["id"] > 0:
+                    if b["id"] in ids:
+                        rep.error("pack", f"duplicate boss id {b['id']}")
+                    ids.add(b["id"])
+                if isinstance(b.get("name"), str) and b["name"]:
+                    key = boss_console_name(b["name"])
+                    if key in names:
+                        rep.warn("pack", f"bosses {names[key]!r} and {b['name']!r} share the console name {key!r}: "
+                                         "spawn_boss / set_boss cannot tell them apart")
+                    names.setdefault(key, b["name"])
+                    if key in STOCK_BOSSES:
+                        rep.warn("pack", f"boss {b['name']!r} shares its console name with the stock {STOCK_BOSSES[key]}")
+        for tid, nm in by_tank.items():
+            if len(nm) > 1:
+                rep.warn("pack", f"bosses {nm} all wrap tank {tid} {tanks_by_id[tid].get('name')!r}: the editor's export "
+                                 "renames every record after its tank, so they end up with one name and spawn_boss cannot "
+                                 "tell them apart (play 2026-10-06); give each its own tank copy")
+    for t in tanks:
+        if is_boss_tank(t) and not any(isinstance(b, dict) and b.get("tank") == t.get("id") for b in bosses):
+            rep.warn(f"tanks '{t.get('name')}'", "editor.boss but no bosses[] record names this tank: it is out of the "
+                                                 "tree and nobody can play it (spec §1b)")
+    if "hideStockBosses" in pack and not isinstance(pack["hideStockBosses"], bool):
+        rep.error("pack", "hideStockBosses must be a boolean")
+    if "hiddenBosses" in pack:
+        hb = pack["hiddenBosses"]
+        if not isinstance(hb, list) or not all(isinstance(x, str) for x in hb):
+            rep.error("pack", "hiddenBosses must be a list of stock boss names")
+        else:
+            for x in hb:
+                if boss_console_name(x) not in STOCK_BOSSES:
+                    rep.warn("pack", f"hiddenBosses entry {x!r} is not one of the five stock bosses "
+                                     f"({', '.join(STOCK_BOSSES.values())}); it hides nothing")
+    if "bossRotation" in pack:
+        if isinstance(pack["bossRotation"], dict):
+            check_boss_rotation(rep, pack["bossRotation"])
+        else:
+            rep.error("pack", "bossRotation must be an object")
     seen = set()
     for i in pack_ids:
         if i in seen:
@@ -1032,6 +1376,15 @@ def validate(pack):
     for ti, t in enumerate(tanks):
         check_tank(rep, ti, t, set(pack_ids), set(hidden), shape_ids)
     check_upgrade_counts(rep, tanks, set(hidden) if isinstance(hidden, list) else set())
+    # the lobby's shape spawn budget (spec §1a, the editor's load-time refusals, 2026-10-06)
+    hs = pack.get("hiddenShapes") if isinstance(pack.get("hiddenShapes"), list) else []
+    sb = shape_budget(shapes if isinstance(shapes, list) else [], set(hs))
+    for name, crowd in sb["crowded"]:
+        rep.error("pack", f"{name} crowds its spawn ring: covered {crowd:.1f}x, a shape may cover {SHAPE_CROWD_LIMIT}x "
+                          "(spec §1a: a smaller size, a lower weight or a wider band)")
+    if sb["room"] > SHAPE_ROOM_LIMIT:
+        rep.error("pack", f"Shapes take too much room: {sb['room']:.1f} squares each on average, the limit is "
+                          f"{SHAPE_ROOM_LIMIT} (spec §1a: big shapes need small weights)")
     return rep
 
 
@@ -1321,11 +1674,38 @@ def describe_tank(t, pack_ids_to_names):
         parts.append(", ".join(f"{k} {t[k]:g}" for k in extras))
     if t.get("helpText"):
         parts.append(f"help: \"{t['helpText']}\"")
+    if is_boss_tank(t):
+        parts.append("boss-only tank (out of the tree; plays at level 7)")
     b = import_budget(t)
     parts.append(f"import budget {b['rate']:.0f}/{LIMIT_RATE} per second, {b['alive']:.0f}/{LIMIT_ALIVE} in the air, "
                  f"room {b['load']:.0f}/{LIMIT_LOAD}, volley {b['volley']}/{LIMIT_VOLLEY}, "
                  f"pieces {b['pieces']}/{LIMIT_PIECES}" + (f", drones {b['drones']}/{LIMIT_DRONES}" if b["drones"] else ""))
     return ". ".join(parts) + "."
+
+
+def describe_boss(b, names):
+    """One line per boss record (spec §1b), in the editor's own words."""
+    ai = b.get("ai") if isinstance(b.get("ai"), dict) else {}
+    sp = b.get("spawn") if isinstance(b.get("spawn"), dict) else {}
+    tank = b.get("tank")
+    tname = VANILLA_NAMES.get(tank, names.get(tank, "?")) if is_int(tank) else "?"
+    radius = ai.get("aggressiveCrashRadius", 0)
+    if not (is_num(radius) and radius > 0):
+        behaviour = "ignores players (only turrets and drones fight)"
+    elif ai.get("wanderWhileFighting"):
+        behaviour = "wanders and shoots"
+    elif max(ai.get("keepDistanceMin", 0) or 0, ai.get("keepDistanceMax", 0) or 0) > 0:
+        behaviour = "keeps distance and strafes"
+    elif (ai.get("aggressiveCrashSpeed", 0.8) or 0) <= 0:
+        behaviour = "stops and shoots"
+    else:
+        behaviour = "charges and rams"
+    idle = "circles the centre" if ai.get("hoverAroundCenter") else "wanders"
+    return (f"boss {b.get('name') or 'Boss'}: tank {tname} at x{b.get('scale', 2):g}, health {b.get('maxHealth', 3000):g}, "
+            f"xp {b.get('xpBounty', 30000):g}, {ai.get('brain', 'simple')} brain, {behaviour}, idle {idle}, "
+            f"{'shapes team' if b.get('neutralTeam', True) else 'enemy team'}, "
+            f"{'claimable' if b.get('claimable', True) else 'AI only'}, spawns in ring {sp.get('from', 0):g}-{sp.get('to', 0.4):g} "
+            f"at weight {sp.get('weight', 1):g}" + ("" if sp.get("weight", 1) else " (only by command)") + ".")
 
 
 def main(argv):
@@ -1395,6 +1775,23 @@ def main(argv):
             print("starters: " + ", ".join(VANILLA_NAMES.get(i, names.get(i, str(i))) for i in pack["starters"]))
         if pack.get("hidden"):
             print(f"hidden vanilla tanks: {len(pack['hidden'])}")
+        sb = shape_budget(pack.get("shapes") or [], set(pack.get("hiddenShapes") or []))
+        if sb["rows"]:
+            worst = max(sb["rows"], key=lambda r: r[3])
+            print(f"shape budget: room {sb['room']:.2f}/{SHAPE_ROOM_LIMIT}, worst crowding {worst[0]} "
+                  f"{worst[3]:.2f}/{SHAPE_CROWD_LIMIT}")
+        for b in pack.get("bosses") or []:
+            if isinstance(b, dict):
+                print(describe_boss(b, names))
+        if pack.get("hideStockBosses"):
+            print("stock bosses hidden")
+        elif pack.get("hiddenBosses"):
+            print("hidden stock bosses: " + ", ".join(pack["hiddenBosses"]))
+        if isinstance(pack.get("bossRotation"), dict):
+            r = pack["bossRotation"]
+            print("boss rotation: every {} min, first after {}, at most {} alive, from {} player(s){}".format(
+                r.get("every", 45), r.get("first", 45), r.get("maxAlive", 1), r.get("minPlayers", 0),
+                (", stock weights " + json.dumps(r["stockWeights"])) if r.get("stockWeights") else ""))
         for t in tanks:
             if isinstance(t, dict):
                 print(describe_tank(t, names))

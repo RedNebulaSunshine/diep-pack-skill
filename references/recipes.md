@@ -741,3 +741,148 @@ fans out. The splitters have no flag: on a drone a plain sub-barrel fires on the
 0 and knockback 0** or the missiles drift apart before the splitters act. The limit is the
 **64 per volley**: two tubes x 6 missiles x (1 + 4 shards) is 60 of it (the validator prints
 58, counting the splitter shot too). Open: what `numDrones` 2 does when 6 are fired per shot.
+
+## 34. Custom bosses: a boss copy, two brains, five behaviours, the rotation
+
+**Confirmed (editor code) 2026-10-06; the worked example is the game's own export of its six bosses
+(`ref.py spec 1b`; `references/stock-bosses.diep-pack`); nothing played yet.** A boss is a pack-level
+record that wraps a tank (spec §1b). Build the tank as usual (a figurative build with the whole
+toolkit: parts, turrets, drones, a trail), then add the record:
+
+```python
+d = Design("Headless Horseman", level=1, author="☀️", boss=True)   # boss=True: editor.boss, out of the tree
+... parts, jaws, spawner, cannon ...
+d.pack.boss(d, name="Headless Horseman", brain="simple", behaviour="charge", idle="wander",
+            size=2.5, health=6000, xp=50000, ring=(0, 0.4), weight=1,
+            message="Hoofbeats... the Headless Horseman rides!")
+d.pack.boss_rotation(every=30, first=10, max_alive=1)                  # optional: the lobby's clock
+```
+
+What the JSON carries, sparse like the game's own records: `{"tank":100001,"name":"Headless
+Horseman","spawnMessage":"…","maxHealth":6000,"xpBounty":50000,"scale":2.5,"ai":{"aggressiveCrashRadius":1500}}`
+plus `"editor":{"boss":true}` and `statsMaxLevel` all 7 on the tank.
+
+**Sizing against the stock bosses.** The five lobby bosses are `scale` 1.55 (Guardian), 1.72
+(Summoner, Defender), 2.09 (the Fallen pair) at **3000 health**, and Decade 2.87 at 10000 / 100000
+score. Health does not grow with scale, so a scale-4 record at 3000 is a big, soft target: 2–3 at
+4000–8000 health is boss-grade for a sandbox lobby; keep the figure's own `baseHealth` and
+`baseBodyDamage` stock (the record's `damageOnTouch` 10, Fallen Booster 12, is the body damage).
+Every stat plays at **level 7**, so a boss with a Reload cap of 12 fires like one at 7; the budget
+rates it that way. Big parts, strong contrast and few colours survive the scale; fine line art
+does not (render with `--boss` and look).
+
+**Which brain.** `simple` (the editor: "drifts, rams, shoots") is the stock bosses' brain: it
+drifts, turns toward a player it spots and fires every gun; its turrets and drones fight on their
+own. **In play (2026-10-06) a simple "Charge" boss kept to itself and only engaged a player inside
+its spot range; it did not pursue across the map, whatever its drift speed**, so a boss is a landmark
+that punishes what comes close, not a hunter: put it where players must pass (the centre, a prize
+ring) and give it `spot_range` 2000 (the maximum) if it should notice them sooner. It suits a monster,
+a vehicle, a thing without a player's cunning. `bot` ("plays like a player") drives the body's guns
+like a sandbox bot, with `skill` 0–1 and `retreat` (backs off to recover under that much health; 0
+fights to the death): meant for a rival tank, a duellist, a "dark version of you", but **in its one
+test (kite, skill 0.8) it mostly wandered and rarely engaged**; offer it as an experiment and default
+to `simple`. A necromancer boss needs `neutral=False` to raise shapes.
+
+**Which behaviour** (the editor's "When it spots a player", within `spot_range`, default 1500):
+- `charge` (and ram, at `charge_speed`): a bull, a horseman, a cannonball with legs;
+- `hold` (stop and shoot): artillery, a tower, a sniper's nest;
+- `kite` (keep distance `keep=(near, far)` and strafe): a gunship, an archer, a wasp;
+- `shoot` (wander and shoot): a patrol, a drifting mine-layer;
+- `none` (ignore them: only its turrets and drones fight): a hive, a carrier, a shrine; Decade and
+  four of the five stock bosses are built this way, with `spot_range` absent.
+Idle is `wander` or `circle` (the map centre at `circle_radius`; 0 = from the map size, the
+Guardian's way). `min_level` (15) leaves low players alone; 0 attacks everyone. `faces_forward`
+turns the hull to its drift, the way the Guardian and Fallen Booster do.
+
+**The rotation.** `boss_rotation(every, first, max_alive, min_players, stock_weights)` sets the
+lobby's clock while the pack is loaded; `stock_weights={"Guardian": 0, …}` keeps a stock boss out,
+`hide_stock_bosses = True` removes all five, `hidden_bosses = ["Summoner"]` some. A record with
+`weight=0` spawns only by `spawn_boss <name>` (the name lower-cased without spaces). Bosses spawn
+on their own only where **Boss Auto-Spawn** is on (the sandbox admin panel); say so in the
+delivery. A boss from a **stock tank** needs no tank in the pack: `pack.boss("Octo Tank", size=4)`.
+**One tank per boss record**: the export renames each record after its tank, so two records on
+one tank share a name and `spawn_boss` cannot tell them apart (play 2026-10-06); a variant boss
+gets its own tank copy.
+
+**`minDamageMultiplier`** (4 on the stock records, 6 on Fallen Booster) is a floor on shot damage: at 6 a
+one-gun boss killed a maxed-regen Tank in 11 shots against 16 with the key absent (play 2026-10-06).
+Write it (`minDamageMultiplier=4`, as the game does) on a boss whose shots must bite.
+**Open in play** (spec §13 item 22): whether a boss copy's cursor pivots and living limbs do anything
+under an AI driver (expect living limbs to track targets, cursor pivots to rest); whether the bot
+brain engages with "Charge" or a higher skill.
+
+## 35. Parts that ride parts: moons, a wheel, a gun ring, a chained tail
+
+**Confirmed in play 2026-10-06 (the orbit); the rest from the editor's code.** `shape(ride=carrier)`
+puts a part on another part (`mountPart`, spec §8): its offsets are measured from the carrier's
+centre along the carrier's angle, so a spinning carrier swings everything on it round. A rider draws
+**under** its carrier unless `above=True` (the first moons were barely visible beneath their plate;
+`orbit()` defaults to above). Chains nest four deep (a root part and four riders); a rider is **looks
+only** (its hitbox is cleared on import), so put `collidable` on the carrier. Barrels ride parts too
+(`rod(ride=…)`, `weapon(ride=…)`).
+
+```python
+planet = d.shape(0, 40, at=(-70, 0), color=C.indigo, name="planet")
+d.orbit(planet, n=3, radius=60, size=10, color=C.yellow, spin=0.03, name="moon")   # spins the planet
+hub = d.shape(0, 1, at=(0, -60), name="wheel hub")              # an invisible hub for a lantern wheel
+d.orbit(hub, n=6, radius=45, sides=4, size=8, color=C.orange, spin=0.05, name="lantern")
+d.gun_ring(plate, n=4, radius=40, auto_fire=True)                # guns on a spinning plate
+```
+
+Uses: moons and electrons; a clock (two riders of different radii on a slow hub, or two hubs with
+different spins); lanterns, bells or gondolas on a wheel; a halo of motes without drones (so it
+costs no budget); a chained tail of beads that spins as one piece (riders on riders, four deep);
+an eye whose pupil rides the eyeball and a brow that rides the eye. A rider's `aboveBody` and
+`order` place it in the draw sequence like any part. **A gun ring** (`gun_ring()`, the game's
+change notes' "rotating gun ring") works: barrels riding a spinning plate turn with it and fire
+(play 2026-10-06, with Always fire; the editor's tooltip on such a barrel, "Looks only; it fires
+nothing", is wrong). Spin rates: 0.03 per tick is a turn in about 8 s; 0.1 is brisk; a planet at
+0.01 drifts.
+
+**Fixed rotation** (`shape(fixed=True)`, spec §8) keeps a part's **angle** in the world while the
+tank turns ("like a dominator's base", the editor). Only the angle is fixed: a part off the centre
+still swings round with the aim, so a fixed part sits at the centre: `base()` for a dominator-style
+square under the hull, `compass()` for a needle over it (a needle that always points north is a
+tell for a navigator, a ship, an explorer). A fixed part may also spin? No: the editor's Rotation
+choice is one of With the aim / Fixed / Spins.
+
+## 36. Exact colours: true-to-subject palettes, and opacity as an offer
+
+**Confirmed in play 2026-10-06, opacity included.** Every `color` takes a hex string
+`#rrggbb` or `#rrggbbaa` besides the palette (spec §10): `C.rgb(230, 120, 40)`, `C.rgba(255, 255,
+255, 0.35)`, `C.alpha(C.cyan, 0.5)`. The editor shows them as Custom color with Hex and Opacity.
+
+- **Default to the palette.** Players read the stock colours (yellow food, pink crashers, grey
+  barrels, Fallen grey bosses), the picker's names are what a tester can say back, and the team
+  recipe (a team hull under a same-size cover) is simpler with a palette hull.
+- **Reach for hex** when the subject has a colour the palette lacks and a fan would notice: a
+  brand or a flag, a real animal's coat, a film character's suit, a themed arena whose shapes
+  already use hex. Keep the set small (two or three exact colours plus the palette) and offer it in
+  the one question ("exact colours or the palette?") when the subject does not settle it.
+- **27 on a hex hull shows the team colour** (Confirmed in play 2026-10-06; the editor's preview shows
+  the hull's hex instead and misleads). So a hex-coloured figure gets team accents for free: paint
+  the hull its exact colour, set the accents and highlights to 27, no cover shape needed. With no team
+  assigned the 27 part draws see-through with a grey outline.
+- **Opacity** (a ghost, glass, smoke, a shadow, water, a ghostly cape): the game draws the part
+  translucent, over the hull and over arena shapes (play 2026-10-06). It is still an **offer**, not a
+  default (the ask-before-embellishing rule): one line in the question. Keep alpha above about 0x40
+  (25 %) or only the outline reads; 0x80 is a clear ghost, 0xCC a tint.
+- The new swatch **Fallen** (17, `#C0C0C0`) is the stock Fallen bosses' grey: a "fallen" or
+  undead tank line, armour, stone.
+
+## 37. A brood of mixed hatchlings, and shots in a forced colour
+
+**From the game's own Decade (2026-10-06); High for the pack format, open in play for a custom
+pack.** Decade's five drone barrels each carry `projectile: [0, 1, 2, 3, 4, 5, 6, 7]`, eight minion
+types from one barrel, so one spawner hatches a mix. In a design: three drone projectiles, one
+barrel with `projectile=[a, b, c]` and `numDrones` for the whole brood. The editor imports the list
+as a primary plus alternatives of the same base (at most 16), the budget counts the costliest, and
+each shot rolls one. Pair it with `lifetime` ranges (recipe §31) for a nest that hatches different
+things at different times.
+
+Decade's and the Fallen bosses' barrels also carry `forcedBulletColor` with `flags.forceBulletColor`
+(spec §7): the shot takes that colour whoever fires it, which is how each stock boss's drones wear
+the boss's colour even when the record is on another team. The editor keeps the pair raw (no form),
+and **a projectile's own `color` wins over it** (play 2026-10-06), so a pack of your own colours its shots
+through the projectile as always. Summoner's barrels carry `droneSides: 4` the same way; prefer the
+projectile's `sides`.

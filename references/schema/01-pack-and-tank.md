@@ -14,6 +14,10 @@
 | `starters` | int[] | `[100001]`, `[0, 100209, 100211, 100214, 100219]` | The tanks a player can spawn as (vanilla 0 and/or level-1 tanks of this pack). One large pack lists Tank plus four custom level-1 tanks; a total conversion only its first tank. Confirmed 2026-09-26: after importing that conversion a fresh life spawned as its first tank. | Confirmed |
 | `shapes` | CustomShape[] | | Custom arena polygons (food, crashers, bosses): §1a. Referenced by tank `raises` through their id. | High |
 | `hiddenShapes` | string[] | `["hexagon"]`, all seven | Vanilla shape kinds that stop spawning: any of `square`, `triangle`, `pentagon`, `big_pentagon`, `hexagon`, `small_crasher`, `big_crasher` (the same names `raises` uses). Paired with a custom shape whose `editor.replaces` names the same kind. Confirmed 2026-09-26: `["square"]` left an arena with no squares. | Confirmed |
+| `bosses` | Boss[] | | Custom bosses, each a record that wraps one tank: §1b. At most 512. | Confirmed (editor code) |
+| `hideStockBosses` | bool | `true` | None of the lobby's five stock bosses (Guardian, Summoner, Defender, Fallen Booster, Fallen Overlord) spawns while this pack is loaded. Written only when true. | Confirmed (editor code) |
+| `hiddenBosses` | string[] | `["Summoner", "fallen booster"]` | Stock bosses that stop spawning, by name; the editor matches the name lower-cased with its spaces removed, so `"Fallen Booster"` and `"fallenbooster"` both work. Duplicates and empty strings are dropped. | Confirmed (editor code) |
+| `bossRotation` | object | `{"every":30,"first":10,"maxAlive":2,"minPlayers":0,"stockWeights":{"Guardian":0}}` | The lobby's boss clock while the pack is loaded (§1b). | Confirmed (editor code) |
 
 ### 1a. Custom shape (`shapes[]`)
 
@@ -67,6 +71,122 @@ Hexagon 0.004) and every band come from here: vanilla food spawns in 0.2–1, cr
 in 0–0.1. `compose.VANILLA_SPAWN` carries them for `spawn_shares()`.
 | `editor.disabled` | bool | `true` | Not spawned while disabled (all "(Event)" shapes carry it). Confirmed 2026-09-26: a disabled shape at density 1.0 never appeared. | Confirmed |
 | `editor.spawnWeight` | number | `0.003`–`1` | **The weight a disabled shape keeps**: disabling writes `spawn.densityMultiplier: 0` and parks the real weight here, and enabling restores it. | Confirmed (editor code) |
+
+**The shape spawn budget** (Confirmed (editor code) 2026-10-06; the game's change notes call it the fix
+for "packs could spawn so many shapes that the arena had no room left"). Before loading a pack the
+editor, and then the lobby, check every *spawning* shape together: the custom shapes that are not
+disabled plus the stock kinds not in `hiddenShapes`, each with share = weight ÷ the total weight
+(`spawn.densityMultiplier`, missing 0.01; stock weights as in the table above):
+
+- **room** = Σ share × `size`² ÷ 3025 must be ≤ 5, else "Shapes take too much room: N squares each on
+  average, the limit is 5" (3025 = 55², so room is the average shape measured in squares);
+- per shape, **crowding** = 2000 × share × π × `size`² ÷ (22300² × max(|`radiusMax`² − `radiusMin`²|, 0.01))
+  must be ≤ 2, else "<name> crowds its spawn ring: covered Nx, a shape may cover 2x" (the share of a
+  2000-shape map that lands in the ring, over the ring's area on a 22300 map).
+
+A big shape needs a small weight, and a narrow ring magnifies crowding: a size-200 shape at weight
+1 in the ring 0.5–0.55 covers it 47 times over. The stock arena is 1.0 of 5 room and 0.18 of 2 at worst
+(the Alpha Pentagon). `validate_pack.py` reports both as errors in the lobby's words and `compose.save()`
+prints the figures; `validate_pack.shape_budget()` is the port.
+
+### 1b. Custom bosses (`bosses[]`, `hideStockBosses`, `hiddenBosses`, `bossRotation`)
+
+**Added by the editor update of 2026-10-06; Confirmed (editor code), with the game's own export of
+its six bosses as the worked example (`references/stock-bosses.diep-pack`: Decade, Guardian, Summoner,
+Defender, Fallen Booster, Fallen Overlord, each with its tank). First played 2026-10-06: custom bosses
+spawned on `spawn_boss <name>` and from the Bosses tab, and were, at every stat 7 and scale 2.5, far
+too strong to study until their guns were turned down. **The simple brain with "Charge and ram"
+reacts only to a player inside its spot range and does not pursue** across the map (drift speed
+made no difference); **the bot brain**, in one test with "Keep distance", mostly wandered and rarely
+engaged (§13 item 22). The lobby's own bosses are simple-brain and mostly "Ignore them", so a boss is a
+landmark that fights what comes close, not a hunter.** This
+retires `arena.md`'s old rule that a pack cannot make a real boss: a pack now can.
+
+A boss is a **pack-level record that wraps a tank**. The tank is an ordinary tank of the pack (or a
+stock tank by vanilla id: a giant stock Octo Tank is allowed), drawn at `scale`, driven by the boss AI
+or by a player who takes it over, announced when it spawns, and worth `xpBounty` when it dies. The
+editor gets a **Bosses** tab; "Make a boss copy" duplicates a tank with `editor.boss: true`, and "New
+boss" / "New boss from copy" adds the record.
+
+```json
+// the game's own Decade and Guardian (sparse: only what differs from the defaults)
+{"id":1,"tank":100085,"name":"Decade","maxHealth":10000,"xpBounty":100000,"scale":2.87,
+ "minDamageMultiplier":4,"ai":{"directionChangeSpeed":0.02,"floatSpeed":0.2,"rotationChangeSpeed":1}}
+{"id":2,"tank":100145,"name":"Guardian","spawnMessage":"The Guardian of the Pentagons has spawned!",
+ "scale":1.55,"minDamageMultiplier":4,"ai":{"directionChangeSpeed":0.02,"looksForward":true,"hoverAroundCenter":true}}
+```
+
+**The tank side.** `editor.boss: true` on a tank marks it boss-only: the editor drops it from the class
+tree and from `starters`, writes it without tree links, and fixes its **stat levels**: all seven at 7,
+health regen 0 (the "Stat levels" panel is read-only). Its `statsMaxLevel` is still written (the game
+writes `[7,7,7,7,7,7,7,7]`), and the import budget rates its reload at level max(Reload cap, 7). A boss
+record may also name a tank that stays playable (no `editor.boss`); then both exist. The six stock boss
+tanks are ordinary tanks: hull `size` 67 (the cap), hull colours Shiny 7 (Decade), Pink 11, Yellow 8,
+Salmon 9 and **Fallen 17** on both Fallen bosses (why that swatch was added, §10); Decade is a 10-sided
+hull with five Always-fire drone barrels that each carry a **list** of eight minion projectiles (§7
+`projectile`) and three guns on a rear turret; Defender has three traps and three cursor turrets with
+mounted guns; Guardian one rear drone barrel with 24 drones.
+
+**The record** (import clamps in brackets, default in bold; the editor writes a record sparse, like the
+game):
+
+| Key | Type | Meaning |
+|---|---|---|
+| `id` | int | 1–999999; **0 or absent = the editor assigns one**. Unique within the pack. |
+| `tank` | int | The tank it wraps: a custom id of this pack, or a stock id below 100000. The export drops a boss whose tank is missing and **overwrites the record's `name` with the tank's name** when the tank is in the pack, so name the tank; **two records on one tank end up with one name** and `spawn_boss` cannot tell them apart (play 2026-10-06; the editor's Bosses tab shows them as "Name (#C…)"), so give each boss its own tank copy. |
+| `name` | string | [**"Boss"**] What the arena and the Bosses tab call it. The **console name** is this lower-cased with spaces removed (`spawn_boss probelord`, `set_boss <playerId> probelord`). |
+| `spawnMessage` | string | [**""** = the default announcement] What the arena announces when it spawns. |
+| `neutralTeam` | bool | [**true**] "On the shapes' team": counts as a shape, base defences leave it alone, and it and the shapes ignore each other. `false` makes a Fallen-style enemy tank that bases attack; **necromancer bosses need false** to raise arena shapes. |
+| `claimable` | bool | [**true**] "Players can take control (H)" where the lobby allows it. `false` keeps it AI-driven; admins can still `set_boss`. |
+| `maxHealth` | number | [≤ 1 000 000, **3000**] Decade 10000; the five stock bosses keep 3000. |
+| `xpBounty` | number | [≤ 100 000 000, **30000**] Score on kill. Decade 100000. |
+| `scale` | number | [≤ 4, **2**] "Size": scales the tank and everything on it. Stock bosses 1.55 (Guardian), 1.72 (Summoner, Defender), 2.09 (the two Fallen), 2.87 (Decade). |
+| `damageOnTouch` | number | [≤ 1000, **10**] Body damage on contact. Fallen Booster 12. |
+| `knockbackMultiplier` | number | [0–3, **0.05**] Knockback it takes. |
+| `minDamageMultiplier` | number | **Not in the editor's form**; kept raw and written back (4 on five stock bosses, 6 on Fallen Booster). A floor on the damage its shots deal: three identical one-gun bosses (damage 1, reload 4) at 6 / absent / 1 took 11 / 16 / 14 shots to kill a maxed-regen Tank (play 2026-10-06), so **6 hurts clearly more**; 1 against absent is within the noise of regen. Write 4–6 for a boss whose shots must bite whatever its guns say. | Confirmed (6 bites); Medium (floor) |
+| `ai.brain` | enum | [**"simple"** \| `"bot"`] "Simple (drifts, rams, shoots)" or "Bot (plays like a player)": a sandbox bot's brain driving whatever guns the body has. Anything else reads as simple. |
+| `ai.botSkill` | number | [0–1, **0.7**] Bot brain: "how quickly it reacts, how well it aims and how well it dodges". |
+| `ai.botRetreat` | number | [0–0.9, **0**] Bot brain: "backs off to recover under this much health; 0 = fights to the death". |
+| `ai.aggressiveCrashRadius` | number | [≤ 2000; **0** = ignores players] "Spot range": how close a player must come before it reacts. **0 (or absent) means the boss ignores players and only its turrets and drones fight**; the editor's New-boss form writes 1500, the game's Fallen Booster 2000, its other five bosses nothing. |
+| `ai.aggressiveCrashSpeed` | number | [≤ 5, **0.8**] How fast it closes in. Fallen Booster 1.02. |
+| `ai.wanderWhileFighting` | bool | [**false**] Keeps wandering while it shoots. |
+| `ai.keepDistanceMin` / `keepDistanceMax` | number | [0–2000, **0**] "Keep distance": it backs off inside the near edge, closes in past the far one and circles its target in between. The editor swaps them if reversed. |
+| `ai.floatSpeed` | number | [≤ 5, **0.5**] "Drift speed" while idle (stock bosses 0.2–1.02). |
+| `ai.rotationChangeSpeed` | number | [≤ 2, **0**] "Turn speed" of its drift direction (Summoner and Fallen Overlord 0.2, Decade and Defender 1). |
+| `ai.directionChangeSpeed` | number | **Not in the form**; raw, 0.02 on every stock boss. How fast its drift direction changes (a guess). |
+| `ai.looksForward` | bool | [**false**; the New-boss form sets true] "Faces where it drifts". Guardian and Fallen Booster. |
+| `ai.hoverAroundCenter` | bool | [**false**] Idle: "Circle the map centre" instead of "Wander around". Guardian. |
+| `ai.hoverRadius` | number | [0–5000, **0** = from the map size, like the Guardian] "Circle radius". |
+| `ai.minTargetLevel` | number | [0–120, **15**] "Ignores players below level": it, its drones and its turrets leave them alone. Stock bosses 15; 0 attacks everyone. |
+| `ai.leadShots` | bool | [**true**] Aims where the target is heading; its turrets and drones too. |
+| `ai.seesInvisible` | bool | [**false**] Stalkers cannot hide from it. |
+| `ai.onlyPlayers` | bool | [**false**] "Ignores drones and shapes": only shoots at player tanks. |
+| `spawn.from` / `spawn.to` | number | [0–1, **0 / 0.4**] The ring it spawns in, as fractions of the map (0 centre, 1 edge), like a custom shape's band. Swapped if reversed. |
+| `spawn.weight` | number | [0–100, **1**] How often the rotation picks it; **0 keeps it out of the rotation** (console only). |
+| `editor` | object | Editor metadata, kept raw. |
+
+**The five behaviours** the editor's form offers ("When it spots a player") are combinations of the
+fields above, read back in this order: `aggressiveCrashRadius` 0 → **Ignore them (only turrets and
+drones fight)**; `wanderWhileFighting` → **Wander and shoot at them**; a keep distance above 0 → **Keep
+distance and strafe**; `aggressiveCrashSpeed` 0 → **Stop and shoot**; otherwise **Charge and ram**. "When
+no one is near" is **Wander around** or **Circle the map centre** (`hoverAroundCenter`). `compose.Pack.boss()`
+takes these words (`behaviour=`, `idle=`, `brain=`) and writes the fields.
+
+**The rotation** (`bossRotation`, Confirmed (editor code)): `every` [1–1440 minutes, **45**] between
+bosses, `first` [0–1440, **45**] until the first, `maxAlive` [1–6, **1**], `minPlayers` [0–100, **0**]
+online before one spawns, and `stockWeights` {stock boss name: 0–100, at most 16 entries} to reweight
+the five stock bosses (0 keeps one out). Loading the pack sets the lobby's clock; "a roll is skipped
+while the at-once limit is up or too few players are online, so real gaps run longer" (the editor). The
+editor writes `every`/`first`/`maxAlive`/`minPlayers` only when the pack set any of them, and
+`stockWeights` only when non-empty. **Bosses spawn on their own only where Boss Auto-Spawn is on**
+(the sandbox admin panel; the editor shows "Boss auto-spawn is off" with a Turn on button); the console
+spawns one at any time with `spawn_boss <name>`, and `set_boss [playerId] [name]` turns a player into
+one. The editor's Play button can play any boss.
+
+**Sizing against the stock bosses.** A boss plays every stat at level 7 at `scale` 2–4 with
+`maxHealth` 3000–10000: the stock five are 3000 health at 1.55–2.09, Decade 10000 at 2.87. Health does
+not scale with size, so a scale-4 record at 3000 is a big, soft target; the room a boss takes is the
+tank's own import budget (its guns, its drones), rated at Reload 7.
 
 **Shape editor ranges** (read off two exports of one shape, every value maxed and every value
 at its minimum, 2026-09-29; the validator warns outside them):
@@ -129,7 +249,7 @@ The smallest tank the editor writes (a Basic Tank clone):
 | `id` | int | `100002`, `100067` | Tank ID. Custom IDs start at 100001 and are reassigned on "add to this pack". The official anniversary pack uses 100065–100084 (100070 missing). IDs below 100000 are vanilla (§11). Referenced by `upgradesFrom`/`advancesInto`. The editor keeps a numeric `id` from the file and exports it unchanged, but **the lobby refuses a tank id below 100000**: "tank[0]: id 12 is outside the custom range (>=100000)" (2026-09-29, the `boss-stomp-test` test build), so a pack cannot overwrite a stock tank (or the Fallen bosses built from Overlord 12 and Booster 23); the validator errors. | Confirmed |
 | `name` | string | `"Apex Predator"` | Display name. Duplicates allowed. | Confirmed |
 | `minLevel` | int | `1`, `15`, `30`, `45`, `60`, `120` | Level at which the tank can be chosen (tier gate; ref §2). Official tier-5 tanks use 60. The sandbox level cap is at least 120 (user reached 120 with the K cheat). The editor keeps it within 1–120. | Confirmed |
-| `body` | Body | | Hull geometry and styling. §3. | Confirmed |
+| `body` | Body | | Hull geometry and styling. §3. `body.color` takes a palette index or, since 2026-10-06, a hex string (§10); it is read through the same parser as parts. | Confirmed |
 | `baseHealth` | number | `100000` | Base max HP. Absent = 50 (vanilla at level 1, ref §6); at most 100000. Played 2026-09-29 (the `boss-test` test build: 100000 health, `baseBodyDamage` 40, `knockbackMultiplier` 0, `speedMultiplier` 0.6, a collidable size-150 body over a size-67 hull): it worked as the numbers say, a powerful tank, but a playable one, not a diep boss (arena.md §2). | Confirmed (editor code, play) |
 | `baseBodyDamage` | number | `7` (Spike), `8` (Blender) | Base body damage in the ref §6 unit where vanilla is 5 and damage = (points + base) × 4. Spike's "+2 base body damage" is exactly 7. Absent = 5; at most 10000. The editor: "Damage dealt to whatever runs into it." | Confirmed (editor code) |
 | `speedMultiplier` | number | `1.1` (Smasher line), `3` | Movement speed multiplier. Absent = 1; at most 3. | Confirmed (editor code) |
@@ -143,7 +263,7 @@ The smallest tank the editor writes (a Basic Tank clone):
 | `statsMaxLevel` | int[8] | `[7,7,7,7,7,7,7,7]`, `[10,0,0,0,0,10,10,10]`, `[12,0,0,0,0,12,12,12]` | Per-stat point caps. The Reload cap (index 1) also sets the rate the import check assumes for every barrel (§7a): caps of 12 make a tank fire 1.5× faster on paper than caps of 7. **Index order is the reverse of the in-game key order**: 0 Movement Speed, 1 Reload, 2 Bullet Damage, 3 Bullet Penetration, 4 Bullet Speed, 5 Body Damage, 6 Max Health, 7 Health Regen. `0` removes the stat from the panel. Vanilla 7, Smasher line 10, official Blender 12, extreme example 12. Verified with `[7,7,7,7,0,0,0,10]`: Health Regen capped at 10, Bullet Speed / Body Damage / Max Health disabled. **Each cap 0–12**: the editor rounds and clamps. | Confirmed |
 | `upgradesFrom` | int[] | `[0]`, `[13,2]`, `[1,9]` | Parent tank IDs in the class tree (vanilla or custom). **A tank may offer at most 19 upgrades**, stock children included: adding a seven-tank pack wired to Tank (0) a second time on top of Tank's 6 stock children was refused with `tank 0 offers 20 upgrades, the most is 19` (2026-09-28). "Add to this pack" appends copies, so re-importing a revised pack into the pack that holds the old one stacks its children; import it as a new pack instead. Confirmed. The editor has a dedicated "ladder" screen for this; official tanks carry the field, and the copy function strips it. **The engine validates IDs on import**: a pack referencing ID 56 was refused with `tank 100002 advancesInto unknown id 56`. Verified in game: a custom tank with `upgradesFrom: [6]`, `minLevel: 30` and no `advancesInto` anywhere was offered as an upgrade from Sniper at level 30. A two-tank pack whose second tank had `upgradesFrom: [100001]` (the first tank's id in the same pack) imported and worked, so in-pack custom links survive import. | Confirmed |
 | `advancesInto` | int[] | `[5,40]` | Child tank IDs, the mirror of `upgradesFrom`; the editor writes both. **Confirmed in play 2026-10-03** (the Cute Diep pilot, four reskins of stock tanks): a custom level-1 tank in `starters` with `advancesInto` naming vanilla ids (Twin, Sniper, Machine Gun, Smasher, Auto Tank) offers those stock tanks, plus a custom child (`100002`) in the same list; the tanks a replaced and hidden stock tank used to lead to reappear under its replacement through the replacement's own `advancesInto`; and `replaces` + `hidden` on clones of Flank Guard, Tri-Angle and Booster took their stock slots. Import as a new pack each time. | Confirmed (editor code; in play) |
-| `editor` | object | `{"replaces":4}`, `{"disabled":true}` | Editor metadata. `replaces` = vanilla ID whose slot this tank takes in the menu. On its own it does **not** hide the vanilla tank (both appeared); pair it with pack `hidden`. `disabled: true` keeps the tank out of the tree (a player-built pack's four level-120 admin tanks). A player-built pack also writes `editor.advancesInto` / `editor.upgradesFrom` (int[]) on six tanks: the editor's own note of a link, separate from the tank-level fields that the engine reads (one spider's `editor.advancesInto: [100082]` names a different tank from the three its real `advancesInto` lists). **Read from the editor's export code** (2026-09-29): a disabled tank is written with empty `upgradesFrom` / `advancesInto` ("outside the tree", "nobody can upgrade into them"), and any link to a disabled or missing pack tank is moved out of the real field into `editor.upgradesFrom` / `editor.advancesInto`, so it comes back when that tank is enabled. **`replaces` does not reach the server's bosses** (2026-09-29, the `fallen-boss-test` test build): with Overlord (12) and Booster (23) replaced and hidden, the admin panel's Fallen Overlord and Fallen Booster spawned as the stock tanks, and the stand-ins imported as 100001 and 100002; the export writes `replaces` only under `editor`, so it is a tree slot, nothing more. | Confirmed (editor code; bosses in play) |
+| `editor` | object | `{"replaces":4}`, `{"disabled":true}`, `{"boss":true}` | Editor metadata. **`boss: true` marks a boss-only tank** (§1b, 2026-10-06): out of the tree and the starters, stats fixed at level 7, written without tree links. `replaces` = vanilla ID whose slot this tank takes in the menu. On its own it does **not** hide the vanilla tank (both appeared); pair it with pack `hidden`. `disabled: true` keeps the tank out of the tree (a player-built pack's four level-120 admin tanks). A player-built pack also writes `editor.advancesInto` / `editor.upgradesFrom` (int[]) on six tanks: the editor's own note of a link, separate from the tank-level fields that the engine reads (one spider's `editor.advancesInto: [100082]` names a different tank from the three its real `advancesInto` lists). **Read from the editor's export code** (2026-09-29): a disabled tank is written with empty `upgradesFrom` / `advancesInto` ("outside the tree", "nobody can upgrade into them"), and any link to a disabled or missing pack tank is moved out of the real field into `editor.upgradesFrom` / `editor.advancesInto`, so it comes back when that tank is enabled. **`replaces` does not reach the server's bosses** (2026-09-29, the `fallen-boss-test` test build): with Overlord (12) and Booster (23) replaced and hidden, the admin panel's Fallen Overlord and Fallen Booster spawned as the stock tanks, and the stand-ins imported as 100001 and 100002; the export writes `replaces` only under `editor`, so it is a tree slot, nothing more. | Confirmed (editor code; bosses in play) |
 | `barrels` | Barrel[] | | Weapons and decorative barrels. §7. **Optional** (smashers have none). **At most 32** (§9c). | Confirmed |
 | `bodyShapes` | BodyShape[] | | Polygons attached to the hull. §8. **At most 32**; the editor drops the rest (§9c). | Confirmed |
 | `turrets` | Turret[] | | Auto-turret mounts. §9. **At most 8** (§9c). | Confirmed |

@@ -16,12 +16,17 @@ The spec is split by family. Read the family a design touches:
 
 | File | Covers |
 |---|---|
-| `01-pack-and-tank.md` | pack envelope, `hidden`, `starters`, custom arena `shapes`; tank fields, stat caps, tree links |
+| `01-pack-and-tank.md` | pack envelope, `hidden`, `starters`, custom arena `shapes` and their spawn budget (§1a), custom **bosses** and the boss rotation (§1b); tank fields, stat caps, tree links |
 | `02-body-and-invisibility.md` | hull polygon and stealth |
 | `03-projectiles.md` | bullets, drones, traps, `burst`, drone settings, decorated and armed projectiles, barrel flags |
 | `04-barrels.md` | every barrel field, and the fire-rate import limit (§7a) |
-| `05-shapes-and-turrets.md` | body shapes, turrets, draw order, the drawing rules, the 32-part limit |
-| `06-palette-and-ids.md` | colour palette with the editor's swatch names; vanilla tank IDs |
+| `05-shapes-and-turrets.md` | body shapes (including parts that ride parts and fixed rotation), turrets, draw order, the drawing rules, the 32-part limit |
+| `06-palette-and-ids.md` | colour palette with the editor's swatch names, exact hex colours with opacity; vanilla tank IDs |
+
+**Checked against the editor's code of 2026-10-06** (bundle `index-67ee240f.js`, the update that
+added custom bosses, exact colours, parts riding on parts, fixed rotation, eight hitboxes per tank
+and a shape spawn budget). Everything from that update is tagged **Confirmed (editor code)** until
+played; the open play questions are in §13 item 22.
 
 Section numbers (§1 to §13) are kept from the original single document so cross-references in
 the recipes, the scripts and the validator still resolve. `references/quick-reference.md` condenses
@@ -55,16 +60,20 @@ carries one tag:
   one normaliser before the editor shows it, and what the lobby receives is the editor's own
   re-export of the result. It **drops** what is past a count limit (512 tanks, 256 custom
   shapes, 16 projectiles; per tank and per projectile 32 barrels, 32 shapes or parts, 8
-  turrets, §9c), **clamps** numbers to the ranges given with each field (barrel length,
+  turrets, §9c; 512 bosses, §1b), **clamps** numbers to the ranges given with each field (barrel length,
   offset and gap ±500, width 2.5, reload 20, bullet size 3, lifetime 30 s, 24 drones, hull
   size 67, 18 sides, stat caps 12, and so on), **fills in** its default for a missing field,
-  keeps only the first three `collidable` parts of each tank and projectile, and silently
+  keeps only the first **eight** `collidable` parts of each tank (three before 2026-10-06) and
+  three of each projectile, clears a `mountPart` that points at nothing, at itself or more than four
+  deep (§8), and silently
   rewires what cannot work (a projectile's barrel that fires a projectile carrying pieces gets
   a plain default shot, §5). Nothing warns; `validate_pack.py` reports each case instead.
-  Unknown keys pass through untouched, and so do the legacy keys of old stock data
+  Unknown keys pass through untouched (that is how the stock bosses' `forcedBulletColor`,
+  `droneSides` and `minDamageMultiplier` survive a round trip, §7 and §1b), and so do the legacy keys of old stock data
   (`addFinalAngle`, `bulletTimeLeftMultiplier`, `flags.largeRectSide` and the like), which it
   converts. The lobby refuses a pack whose export passes **900 KB** (the pack screen shows
-  "This pack is N KB; the lobby takes 900 KB").
+  "This pack is N KB; the lobby takes 900 KB"), and since 2026-10-06 a pack whose spawning shapes
+  pass the **shape budget** (§1a: "Shapes take too much room" / "<name> crowds its spawn ring").
 - **Angles are radians**, positive = clockwise on screen when facing the aim direction.
   Negative values and values above π both appear; nothing is normalised.
 - **Time units.** `lifetime` is seconds. `spinSpeed`, `spin` and `invisibility.gain` are
@@ -86,7 +95,9 @@ carries one tag:
 **Always written:** pack `version`, `name`, `tanks`; tank `id`, `name`, `minLevel`,
 `body.sides`, `invisibility.gain`, `invisibility.lossOnHit`, `statsMaxLevel`; projectile
 `name`, `base`, `sides`; barrel `bulletType`, `projectile`; drone barrel `numDrones`,
-`droneAggressiveCrashRadius`; body shape `sides`. Official exports additionally always
+`droneAggressiveCrashRadius`; body shape `sides`; boss record `id`, `tank`, `name` (§1b: the
+game's own export of its six bosses writes only those and the numbers that differ from the
+defaults). Official exports additionally always
 write `invisibility.lossOnAttack` and `lossOnMovement`. Pack `author` and shape `size` (25)
 are omitted by some human exports, so neither is required.
 
@@ -100,6 +111,22 @@ writes `aboveBody: false`).
 
 
 ## 13. Remaining open questions
+
+22. *(found 2026-10-06, the editor update; read from the editor's code and the game's own export of
+   its bosses; first probe played the same day)* **The editor update of 2026-10-06.** Resolved in play
+   (the lab's Editor Update Probe 0.1.0): **27 parts on a hex hull show the team colour**, see-through
+   with a grey outline while no team is assigned (§10); **riding parts orbit** with their spinning
+   carrier and draw under it unless `aboveBody` (§8); a **fixedRotation** part holds still while the
+   tank turns (§8); all **eight collidable** parts collide (§8); a drone barrel's **projectile list**
+   hatches a mix (§7); a projectile's own `color` beats `forcedBulletColor` (§7); `spawn_boss <name>`
+   spawns a custom boss (§1b); probe 0.2.0 added that a hex colour's **alpha draws translucent** in
+   play, over the hull and over arena shapes (§10), and that a **barrel riding a part turns with it
+   and fires** (§7, §8; the editor's tooltip "Looks only; it fires nothing" is wrong). Probe 0.3.0 settled `minDamageMultiplier`
+   (6 hurts clearly more than absent or 1: a damage floor, §1b) and showed the **simple** brain's charge
+   reacting only within its spot range, never pursuing, and the **bot** brain mostly wandering (§1b).
+   Still open: a boss from a **stock tank** at scale 4 (spawned, not studied); the rotation sentence
+   after loading; what `ai.directionChangeSpeed` does; whether a bot-brain boss engages with a "Charge"
+   behaviour or a higher skill.
 
 Resolved: Q1–9, Q11–19, Q21–26 of the original list, plus `preSpawn`, `burst`,
 `firesOnDeath`, `numBullets`, range-valued multipliers and `droneControllable` found along

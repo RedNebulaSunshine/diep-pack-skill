@@ -27,8 +27,14 @@ clamped (numbers) or dropped (lists), silently; the validator warns.
   validates on import and aborts on `tank <id> advancesInto unknown id <n>`, on a pack over
   900 KB, and on the import budget below (`fires too much: N/120 per second …`).
 - The editor normalises every pack on import (§0): it clamps, drops past its counts, fills in
-  defaults, keeps three `collidable` parts per tank and per projectile, and gives a projectile's
+  defaults, keeps **eight** `collidable` parts per tank and three per projectile, clears a `mountPart`
+  that points nowhere or nests more than four deep, and gives a projectile's
   barrel that fires a decorated or armed projectile a plain shot instead.
+- **Colours** (§10) are palette indices 0–27 or, since the editor update of 2026-10-06, exact hex
+  strings `"#rrggbb"` / `"#rrggbbaa"` on every `color` field (the alpha draws translucent, play). The lobby
+  also refuses a pack whose spawning shapes pass the **shape budget** (§1a).
+- **Editor labels** since 2026-10-06: custom tanks read **#C1, #C2 …** in pack order (#C1 = id
+  100001) and the console takes `set_class c1`; use those labels in recaps and test instructions.
 
 ## Pack (§1)
 
@@ -42,6 +48,15 @@ clamped (numbers) or dropped (lists), silently; the validator warns.
 | `starters` | int[] | | tank ids (vanilla 0 or this pack's level-1 tanks) a player can spawn as | C |
 | `shapes` | CustomShape[] | | custom arena polygons (§1a): `id` `custom_shape_N`, `name`, `sides`, `size`, `maxHealth`, `xpBounty`, `damageOnTouch`, `knockbackOnTouch`, hex `color`, `ai.floatSpeed`, `ai.aggressiveCrashSpeed/Radius` (crasher), `spawn.densityMultiplier` (the editor's "spawn weight": square 1, triangle 0.2, pentagon 0.05; a shape's share of the spawns ∝ weight × band width), `spawn.radiusMin/Max` (square rings, 0 centre, 1 edge); design with `references/arena.md`, `editor.replaces` (vanilla kind), `editor.disabled` (writes density 0 and parks the weight in `editor.spawnWeight`). Missing size 50, health and xp 10. Ids are positional (`custom_shape_1…` in list order); ≤ 256 shapes | C |
 | `hiddenShapes` | string[] | | vanilla kinds that stop spawning: `square` `triangle` `pentagon` `big_pentagon` `hexagon` `small_crasher` `big_crasher` | C |
+| `bosses` | Boss[] | | **custom bosses** (§1b, 2026-10-06): `{tank, name, spawnMessage, neutralTeam true, claimable true, maxHealth 3000, xpBounty 30000, scale 2 (≤ 4), damageOnTouch 10, knockbackMultiplier 0.05, ai {brain "simple"/"bot", aggressiveCrashRadius 0 = ignores players (form writes 1500), aggressiveCrashSpeed 0.8, wanderWhileFighting, keepDistanceMin/Max, floatSpeed 0.5, rotationChangeSpeed, looksForward, hoverAroundCenter, hoverRadius, minTargetLevel 15, leadShots true, seesInvisible, onlyPlayers, botSkill 0.7, botRetreat}, spawn {from 0, to 0.4, weight 1; 0 = console only}}`; ≤ 512; the tank is a pack tank (mark it `editor.boss` to keep it out of the tree, stats fixed at 7) or a stock id; console name = the name lower-cased without spaces (`spawn_boss`, `set_boss`) | C (editor code) |
+| `hideStockBosses` | bool | | no stock boss spawns | C (editor code) |
+| `hiddenBosses` | string[] | | stock bosses that stop spawning: `Guardian` `Summoner` `Defender` `Fallen Booster` `Fallen Overlord` (case and spaces ignored) | C (editor code) |
+| `bossRotation` | object | | `{every 45 min (1–1440), first 45, maxAlive 1 (≤ 6), minPlayers 0, stockWeights {name: 0–100}}`; needs Boss Auto-Spawn on in the lobby's admin panel | C (editor code) |
+
+**Shape budget (§1a, the lobby's load-time refusal, 2026-10-06).** Over every spawning shape (custom
+not disabled + stock not hidden), share = weight ÷ total: Σ share × size² ÷ 3025 ≤ **5** ("Shapes take
+too much room"), and per shape 2000 × share × π × size² ÷ (22300² × max(|to² − from²|, 0.01)) ≤ **2**
+("crowds its spawn ring"). Big shapes need small weights; narrow rings magnify crowding.
 
 ## Tank (§2)
 
@@ -75,7 +90,7 @@ clamped (numbers) or dropped (lists), silently; the validator warns.
 | `body.star` | bool | false | alternating inner (0.4) and outer vertices | C |
 | `body.angle` | number | 0 | fixed rotation; official octagons π/8 | C |
 | `body.size` | number | 50 | hull radius; 44.23 octagon matches a 50 circle; 5–8 hides the hull behind parts (hitbox shrinks with it); ≤ 67 | C |
-| `body.color` | int | 27 team | palette index (§10). Parts at 27 ("same color as the body") take the hull's colour (C): for team accents on a coloured figure leave the hull team-coloured and cover it with a same-size `aboveBody` shape (§10); shots with no `color` are team-coloured | C |
+| `body.color` | int \| hex | 27 team | palette index or hex string (§10). Parts at 27 ("same color as the body") take a palette hull's colour, but on a **hex hull they show the team colour** (C, play 2026-10-06): the simple way to team-tint a coloured figure. On a palette hull, team accents need a team hull under a same-size `aboveBody` cover (§10); shots with no `color` are team-coloured | C |
 | `body.spinSpeed` | number | 0 | radians per tick (0.0628 = one turn per 4 s); −0.5–0.5 | C |
 | `invisibility.enabled` | bool | false | tank fades | C |
 | `.gain` | number | 2/65 | the editor's "Time to vanish": gain = 1 ÷ (25 × seconds), 0.1–60 s (default 1.3 s; Landmine 10 s) | C |
@@ -93,14 +108,14 @@ clamped (numbers) or dropped (lists), silently; the validator warns.
 | `star` | bool | false | star polygon | C |
 | `spin` | number | 0 | rotation per tick (missiles 0.1); −0.5–0.5 | C |
 | `spinFlipsOnSecondary` | bool | false | spin reverses while right click is held (Skimmer) | C |
-| `color` | int | team | palette index; 27 = owner colour | C |
+| `color` | int \| hex | team | palette index or hex string; 27 = owner colour; a barrel's `forcedBulletColor` + `flags.forceBulletColor` (the stock bosses) is the other way to colour a shot, which wins is open | C |
 | `burst` | object | | `onSecondary` / `onDestroyed` / `onExpire`: ends the projectile; sub-barrels flagged `firesOnDeath` fire once as it dies (Firework), and only if a trigger is set | C |
 | `barrels` | Barrel[] | | sub-barrels, same schema as §7, `projectile` indexes the **tank's** list. `forceFire` fires in flight (missiles), `firesOnDeath` fires once at death, unflagged fires on the owner's click (Factory minions) or, when on one of the projectile's `turrets`, on its own at targets. **A sub-barrel may only fire a projectile that carries nothing** (no parts, barrels, turrets) and is not its own; otherwise the editor gives it a plain default shot. ≤ 32 | C |
 | `drone.idle` | enum | `hover` | `hover` standard (Overlord), `cruise` Battleship swarm | C |
 | `drone.controllable` | bool | true | **the switch the engine reads**; the barrel's `droneControllable` does nothing alone (write both to look stock) | C |
 | `drone.keepDistanceMin/Max` | number | | stand-off band measured **from the target** (Factory 300–800); ≤ 2000 | C |
 | `drone.repel` | bool | true | false = right click does not push it away | C |
-| `parts` | BodyShape[] | | decoration on the projectile, §8 schema, in a frame where the projectile's radius counts as 50; under its disc unless `aboveBody`; ≤ 32, three `collidable` at most | C (scale M) |
+| `parts` | BodyShape[] | | decoration on the projectile, §8 schema (`mountPart` and `fixedRotation` included), in a frame where the projectile's radius counts as 50; under its disc unless `aboveBody`; ≤ 32, three `collidable` at most | C (scale M) |
 | `turrets` | Turret[] | | auto-turrets on the projectile, §9 schema; sub-barrels ride them via `mountTurret`; a backward recoil engine on one steers a missile, a long-reload gun on a short-range one is a proximity fuse (recipes §33); ≤ 8 | H |
 | `flags.forceFire` | | | fires without input: spawners, missile thrusters, auto-fire guns, trail droppers | C |
 | `flags.holdsRaised` | | | Necromancer spawner: slots filled by raised polygons, plus one per Reload stat point; `projectile: -1`; tank barrels only | C |
@@ -139,7 +154,9 @@ clamped (numbers) or dropped (lists), silently; the validator warns.
 | `mountTurret` | int | | rides `turrets[i]` (the projectile's own list for a sub-barrel) | C |
 | `mount` | int | | rides `barrels[i]` of the same array, measured from that barrel's midpoint (launcher tips) | H |
 | `invisible` | bool | false | not drawn, still fires: hidden bite points, trail droppers | C |
-| `color` | int | 1 (Cannon grey) | palette index; 27 = the body's colour (missile barrels) | C |
+| `color` | int \| hex | 1 (Cannon grey) | palette index or hex string; 27 = the body's colour (missile barrels) | C |
+| `mountPart` | int | | rides body shape i (its angle, gap and offset from that shape's centre, along it); a gun ring on a spinning plate turns with it and fires (play; the editor's tooltip saying otherwise is wrong) | C |
+| `forcedBulletColor` | int \| hex | | game-only (the stock bosses' drones), with `flags.forceBulletColor`; the projectile's own `color` wins over it (play), so a pack of your own has no use for it | H |
 | `order` | int | 0 | draw order shared with shapes and turrets; -1 sits under the main barrel | C |
 | `editor` | object | | `{"name": "…"}` (name every part), `{"group": "…"}` folder | C |
 
@@ -165,12 +182,14 @@ theirs. Put complex projectiles on a **Reload cap of 0**, as a player-built pack
 | `angle` | number | 0 | rotation | C |
 | `spinSpeed` | number | 0 | per tick (Smasher 0.1, Spike 0.17) | C |
 | `star` | bool | false | 2 × sides vertices, inner radius 0.4 × size | C |
-| `collidable` | bool | false | the part has its own hitbox, contact at roughly half to two thirds of its drawn radius; **only the first three per tank or projectile** | C |
+| `collidable` | bool | false | the part has its own hitbox, contact at roughly half to two thirds of its drawn radius; **only the first eight per tank** (three before 2026-10-06; all eight collide, play), three per projectile; never on a part that rides a part | C |
 | `aboveBody` | bool | false | draw over the hull (or over its turret's disc) | C |
 | `mountTurret` | int | | rides a turret, offsets in the turret's frame | C |
 | `mount` | int | | rides a barrel, from its midpoint | H |
+| `mountPart` | int | | **rides another body shape** (2026-10-06): offsets from the carrier's centre along its angle, so a spinning carrier swings it round (moons, a wheel, a chained tail); draws **under** the carrier unless `aboveBody`; chains nest 4 deep; `mount` and `mountTurret` win over it; a riding shape has no hitbox | C |
+| `fixedRotation` | bool | false | keeps its **angle** in the world while the tank turns (a dominator's base, a compass needle); the position still turns with the aim, so centre it. The editor's Rotation choice: With the aim / Fixed / Spins | C |
 | `staysVisible` | bool | false | stays drawn while the tank is faded (eyes on a stalker) | C |
-| `color` | int | 0 (Border grey) | palette index | C |
+| `color` | int \| hex | 0 (Border grey) | palette index or hex string | C |
 | `order`, `editor` | | | as barrels | C |
 
 ## Turret (§9)
@@ -184,7 +203,7 @@ theirs. Put complex projectiles on a **Reload cap of 0**, as a player-built pack
 | `controllable` | bool | false | player aims it while firing; with a range it still tracks enemies when idle | C |
 | `aboveBody` | bool | true | drawn over the hull | C |
 | `baseSize` | number | 25 | disc radius (10 for a joint, 30 for an eyeball, 1 to hide) | C |
-| `color` | int | 1 | disc palette index (19 White eyeball, 27 owner) | C |
+| `color` | int \| hex | 1 | disc palette index or hex string (19 White eyeball, 27 owner) | C |
 | `order`, `editor` | | | as barrels | C |
 
 Turrets always track the nearest target inside `range` and `arc`, armed or not. A turret's
@@ -204,14 +223,15 @@ and turrets. Hull polygons draw at 1.3 × size, squares axis-aligned. Outline = 
 | 2 | Blue (fixed `#00B2E1`) | 13 | Mint | 22 | Indigo |
 | 4 | Red **team slot** | 14 | Box (`#BBBBBB`) | 23 | Brown |
 | 5 | Purple **team slot** | 16 | Orange | 24 | Crimson |
-| 6 | Green **team slot** | 18 | Cyan | 25 | Forest |
-| 7 | Shiny | 19 | White | 26 | Plum |
-| 8 | Yellow | | | 27 | owner / team colour |
+| 6 | Green **team slot** | 17 | Fallen (`#C0C0C0`, since 2026-10-06) | 25 | Forest |
+| 7 | Shiny | 18 | Cyan | 26 | Plum |
+| 8 | Yellow | 19 | White | 27 | same color as the body (the hull's; the team's on a team hull) |
 | 9 | Salmon | | | | |
 
 3–6 follow the player's team once they have been on that team; for a colour that must stay
-put use Salmon or Crimson (reds), Blue or Indigo, Mint or Forest, Plum. 3, 12, 15, 17, 28, 29
-are unnamed greys.
+put use Salmon or Crimson (reds), Blue or Indigo, Mint or Forest, Plum. 3, 12, 15, 28, 29
+are unnamed greys. **Exact colours**: any `color` may be `"#rrggbb"` or `"#rrggbbaa"` (the
+editor's Custom color with Opacity; translucent in play); `C.rgb()`, `C.rgba()`, `C.alpha()`.
 
 ## Vanilla ids (§11): the full table with levels and parents is `vanilla-tanks.md`
 

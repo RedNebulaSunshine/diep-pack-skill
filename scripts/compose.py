@@ -25,7 +25,15 @@ Conventions (all confirmed in references/schema/ unless marked GUESS):
     500 long and 42*width-multiplier wide, placed anywhere by endpoints; line() is a hair-thin
     rod drawn over the hull (line art: mouths, brows, scars, seams)
   * shapes and rods can ride a turret (turret=i) or a barrel (mount=i): they then live in that
-    part's frame and turn with it (jaws, eyes, hands)
+    part's frame and turn with it (jaws, eyes, hands); since the editor update of 2026-10-06 a
+    shape, rod or weapon can also ride a body shape (ride=<that shape>), four deep: spin the
+    carrier and everything on it orbits (moons, a gun ring); a riding shape has no hitbox
+  * shape(fixed=True) keeps the part's angle in the world while the tank turns (a dominator's
+    base, a compass needle); colours are palette indices (C.<name>) or hex strings "#rrggbb" /
+    "#rrggbbaa" (C.rgb(), C.rgba(), C.alpha()); alpha draws translucent in play
+  * a boss is a pack-level record wrapping a tank: Pack.boss(tank, ...) with the editor's own
+    words (brain, behaviour, idle, size, health, xp, ring, weight); Design(..., boss=True) or
+    Pack.boss(..., boss_only=True) marks the tank boss-only (out of the tree, stats fixed at 7)
   * `with d.frame(at, angle):` builds a sub-assembly in local coordinates (a claw, a gun pod,
     an eye pair) and places it; nest frames freely; mirror() the result afterwards
   * stock weapon systems are one call each (mechanics.py): d.twin(), d.spawner(), d.destroyer(),
@@ -34,9 +42,11 @@ Conventions (all confirmed in references/schema/ unless marked GUESS):
     human-pack tricks are presets too: d.jaws(), d.trail(), d.eye(), d.cursor_pivot(),
     d.contact_damage(), d.turreted_bullet(), auto_fire=True on any gun
   * save() reports parts the hull would swallow and the figure's overall span
-  * budget: 32 body shapes, 32 barrels and 8 turrets per tank (the editor drops the rest), and
-    the lobby's import budget (120/s, 250 alive, 2000 room, 64 per volley, 96 drones, 96 pieces;
-    spec 7a); save() warns and the validator errors when a design is over
+  * budget: 32 body shapes, 32 barrels and 8 turrets per tank (the editor drops the rest), 8
+    collidable parts per tank (3 per projectile), and the lobby's import budget (120/s, 250
+    alive, 2000 room, 64 per volley, 96 drones, 96 pieces; spec 7a); save() warns and the
+    validator errors when a design is over; save() also prints the arena's shape budget (room
+    5, crowding 2 per ring; spec 1a) and every boss
 
 Standard library only. Validation and rendering use the sibling scripts.
 """
@@ -66,12 +76,16 @@ MAX_BODY_SHAPES = 32  # the editor keeps 32 body shapes and 32 barrels per tank 
 MAX_BARRELS = 32
 MAX_TURRETS = 8      # the editor keeps 8 turrets per tank and per projectile (spec §9c)
 MAX_PIECES = 96       # shapes + barrels + turrets on the tank and all its projectiles (spec §9c)
+MAX_COLLIDABLE = 8    # collidable parts per tank (3 per projectile); the rest become drawing-only (spec §8)
+MAX_RIDE_DEPTH = 4    # parts nest 4 deep at most (spec §8)
 TURRET_RADIUS = 25    # default turret disc radius (`baseSize`)
 SHAPE_SIZE = 25       # a shape without `size` draws at 25
 
 
 class C:
-    """Palette indices (spec section 10). The lower-case names are the editor's own swatch
+    """Palette indices (spec section 10), or hex strings through rgb()/rgba()/alpha(). On a hull
+    painted a hex colour, parts at 27 show the TEAM colour (Confirmed in play 2026-10-06), so a hex
+    hull is the simple way to team-tint a coloured figure. The lower-case names are the editor's own swatch
     names (what the tester sees in the per-part colour picker), so recaps can use them. Indices
     3-6 are the game's TEAM slots, which the picker calls Red, Purple and Green: in play they
     show a team colour and, once the player has been on that team, follow the player's current
@@ -101,7 +115,8 @@ class C:
     team_purple = 5   # picker "Purple" #BF7FF5: purple TEAM slot
     plum = 26         # #7B4FA8
     pink = 11         # #F177DD (crasher)
-    owner = 27        # "same color as the body": the owner's team colour
+    fallen = 17       # #C0C0C0 "Fallen", the Fallen bosses' grey (added to the picker 2026-10-06)
+    owner = 27        # "same color as the body": the hull's colour, the team's when the hull is team-coloured
     team_blue = 3     # not in the picker: blue TEAM slot
     # aliases kept for existing scripts
     dark = 0
@@ -117,13 +132,47 @@ class C:
 
     NAMES = {}
     EDITOR = {}       # index -> editor swatch name
+    HEX = {}          # index -> the editor's hex for it (what the picker shows; 3-6 and 27 only as drawn)
+
+    @staticmethod
+    def rgb(r, g, b):
+        """An exact colour, "#rrggbb" (the editor's Custom color, 2026-10-06; spec §10)."""
+        return "#%02x%02x%02x" % tuple(max(0, min(255, int(round(v)))) for v in (r, g, b))
+
+    @staticmethod
+    def rgba(r, g, b, a=1.0):
+        """An exact colour with opacity, "#rrggbbaa"; `a` is 0-1 (the editor's Opacity slider). The part
+        draws translucent in play, over the hull and over arena shapes (Confirmed 2026-10-06)."""
+        return C.rgb(r, g, b) + "%02x" % max(0, min(255, int(round(a * 255))))
+
+    @staticmethod
+    def alpha(colour, a):
+        """`colour` (a palette index, a C.<name>, or a hex string) at opacity `a` (0-1), as "#rrggbbaa".
+        A team slot or 27 cannot carry alpha: they resolve to a fixed hex here and lose their team
+        behaviour, so pass a fixed swatch."""
+        h = C.to_hex(colour)
+        return h[:7] + "%02x" % max(0, min(255, int(round(a * 255))))
+
+    @staticmethod
+    def to_hex(colour):
+        """The hex string the editor would show for a colour value."""
+        if isinstance(colour, str) and colour.startswith("#"):
+            return colour.lower()
+        idx = C.NAMES[colour] if isinstance(colour, str) else int(colour)
+        if idx not in C.HEX:
+            raise ValueError(f"palette index {idx} has no fixed hex (team slots and 27 follow the team)")
+        return C.HEX[idx]
 
 
 C.NAMES = {k: v for k, v in vars(C).items() if isinstance(v, int) and not k.startswith("_")}
 C.EDITOR = {19: "White", 14: "Box", 1: "Cannon", 0: "Border (grey)", 20: "Charcoal", 4: "Red", 24: "Crimson",
             9: "Salmon", 16: "Orange", 23: "Brown", 8: "Yellow", 7: "Shiny", 6: "Green", 13: "Mint", 25: "Forest",
             18: "Cyan", 21: "Teal", 2: "Blue", 22: "Indigo", 10: "Periwinkle", 5: "Purple", 26: "Plum", 11: "Pink",
-            27: "same color as the body"}
+            17: "Fallen", 27: "same color as the body"}
+C.HEX = {0: "#555555", 1: "#999999", 2: "#00b2e1", 7: "#8aff69", 8: "#ffe869", 9: "#fc7677", 10: "#768dfc",
+         11: "#f177dd", 13: "#43ff91", 14: "#bbbbbb", 16: "#fcc376", 17: "#c0c0c0", 18: "#35c5db", 19: "#ffffff",
+         20: "#3d3d3d", 21: "#12a5a5", 22: "#4a57c8", 23: "#a9724a", 24: "#b5323a", 25: "#2e9e5b", 26: "#7b4fa8"}
+HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")
 
 
 # --- point helpers (degrees, clockwise, forward = 0) -----------------------------------------
@@ -273,13 +322,42 @@ class Tank(_mechanics()):
         return d
 
     def color(self, c):
+        """A colour value for the JSON: a palette index 0-29, a C.<name> string, or a hex string
+        "#rrggbb" / "#rrggbbaa" (lower-cased, as the editor stores it; spec §10, 2026-10-06)."""
         if isinstance(c, str):
+            if HEX_RE.match(c):
+                return c.lower()
             if c not in C.NAMES:
-                raise ValueError(f"unknown colour {c!r}; use C.<name> or an index 0-29")
+                raise ValueError(f"unknown colour {c!r}; use C.<name>, an index 0-29 or a hex string #rrggbb")
             return C.NAMES[c]
         if not 0 <= int(c) <= 29:
             raise ValueError(f"palette index {c} out of range 0-29")
         return int(c)
+
+    def _shape_index(self, ride):
+        """`ride` as a body shape index: an int, or the dict a shape() call returned."""
+        if ride is None:
+            return None
+        shapes = [d for k, d in self.parts if k == "shape"]
+        if isinstance(ride, dict):
+            for i, d in enumerate(shapes):
+                if d is ride:
+                    return i
+            raise ValueError("ride: that shape is not on this tank")
+        i = int(ride)
+        if not 0 <= i < len(shapes):
+            raise ValueError(f"ride: body shape {i} does not exist yet ({len(shapes)} so far)")
+        return i
+
+    def _ride_depth(self, i):
+        """How many parts deep shape i already sits (0 = on the hull, a turret or a barrel)."""
+        shapes = [d for k, d in self.parts if k == "shape"]
+        depth, seen = 0, set()
+        while i is not None and 0 <= i < len(shapes) and i not in seen:
+            seen.add(i)
+            depth += 1
+            i = shapes[i].get("mountPart")
+        return depth
 
     def warn(self, msg):
         if msg not in self.warnings:
@@ -288,15 +366,23 @@ class Tank(_mechanics()):
     # --- body shapes ---
     def shape(self, sides, size, at=(0, 0), angle=0, color=None, above=False, spin=0,
               name=None, order=None, star=False, collidable=None, turret=None, mount=None,
-              stays_visible=None):
+              stays_visible=None, ride=None, fixed=None):
         """Regular polygon of circumradius `size` centred at `at`, rotated `angle` degrees.
         sides 0 (or 1) draws as a circle; star=True alternates inner vertices at 0.4 x size.
         turret=i mounts it on turret i (coordinates in the turret's frame; it turns with the
         turret; above=True puts it over the turret's disc). mount=i mounts it on barrel i
-        (coordinates from the barrel's midpoint, along its axis). stays_visible=True keeps it
-        drawn while the tank is faded (Medium confidence)."""
+        (coordinates from the barrel's midpoint, along its axis). ride=<shape> (the dict another
+        shape() returned, or its index) mounts it on that body shape: coordinates from the
+        carrier's centre along its angle, so a spinning carrier swings it round (moons, a gun
+        ring; Confirmed in play 2026-10-06); a rider draws UNDER its carrier unless above=True
+        (play: moons vanished under their plate), chains nest 4 deep, and a riding shape is looks
+        only, its collidable flag cleared on import (spec §8). fixed=True keeps its angle in the
+        world instead of turning with the aim, like a dominator's base (Confirmed in play; its
+        position still turns with the tank).
+        stays_visible=True keeps it drawn while the tank is faded."""
         s = {"sides": int(sides), "size": size}
-        if turret is None and mount is None:          # mounted parts live in their base's frame
+        ride = self._shape_index(ride)
+        if turret is None and mount is None and ride is None:   # mounted parts live in their base's frame
             at, angle = self._pt(at), self._ang(angle)
         if abs(at[0]) > 1e-9:
             s["xOffset"] = at[0]
@@ -320,13 +406,25 @@ class Tank(_mechanics()):
             s["mountTurret"] = int(turret)
         if mount is not None:
             s["mount"] = int(mount)
+        if ride is not None:
+            if turret is not None or mount is not None:
+                raise ValueError("a shape rides one thing: ride=, turret= or mount=")
+            if self._ride_depth(ride) >= MAX_RIDE_DEPTH:
+                self.warn(f"shape {name or ''} rides {self._ride_depth(ride) + 1} parts deep; the editor clears "
+                          f"anything past {MAX_RIDE_DEPTH} (spec §8)")
+            if collidable:
+                self.warn(f"shape {name or ''} rides another part, so its hitbox is dropped on import; make the "
+                          "carrier collidable instead")
+            s["mountPart"] = ride
+        if fixed:
+            s["fixedRotation"] = True
         return self._add("shape", s, order, name)
 
     def circle(self, size, at=(0, 0), **kw):
         return self.shape(0, size, at, **kw)
 
     def part(self, sides, size, at=(0, 0), angle=0, color=None, above=False, spin=0, star=False,
-             turret=None, name=None, collidable=None):
+             turret=None, name=None, collidable=None, ride=None, fixed=None):
         """A shape dict for a PROJECTILE (`projectile(parts=[...])`): same fields as shape(),
         not registered on the tank. Coordinates are in the projectile's frame (x = its heading),
         which is scaled to the projectile so that its radius counts as ~50 like a hull (2026-09-26:
@@ -352,21 +450,27 @@ class Tank(_mechanics()):
             s["collidable"] = bool(collidable)
         if turret is not None:
             s["mountTurret"] = int(turret)
+        if ride is not None:                # index into the same projectile's parts list (spec §8)
+            s["mountPart"] = int(ride)
+        if fixed:
+            s["fixedRotation"] = True
         if name:
             s["editor"] = {"name": name}
         return s
 
     # --- rods (decorative barrels) ---
     def rod(self, a, b, width=BARREL_WIDTH, end_width=None, color=None, name=None, order=None,
-            turret=None, above=False, **extra):
+            turret=None, above=False, ride=None, **extra):
         """Rectangle/trapezoid from point a to point b, `width` units wide at a and
         `end_width` at b. Becomes a bulletType none barrel. Draws under the hull unless
         above=True (flags.aboveBody: over the hull, or over the disc when on a turret).
-        turret=i / mount=i place it in that part's frame. A rod may cross the hull centre
+        turret=i / mount=i / ride=<shape> place it in that part's frame (ride: from the carrier
+        shape's centre, along its angle; spec §8). A rod may cross the hull centre
         (negative startDistance draws fine)."""
         if end_width is None:
             end_width = width
-        if turret is None and "mount" not in extra:      # mounted parts live in their base's frame
+        ride = self._shape_index(ride)
+        if turret is None and "mount" not in extra and ride is None:   # mounted parts live in their base's frame
             a, b = self._pt(a), self._pt(b)
         ax, ay = a
         bx, by = b
@@ -411,6 +515,8 @@ class Tank(_mechanics()):
             d["color"] = self.color(color)
         if turret is not None:
             d["mountTurret"] = turret
+        if ride is not None:
+            d["mountPart"] = ride
         d.update(extra)
         return self._add("barrel", d, order, name)
 
@@ -533,8 +639,9 @@ class Tank(_mechanics()):
             kind = next((k for k, d in self.parts if d is p), None)
             if kind is None:
                 raise ValueError("mirror: part not found in this tank")
-            if "mountTurret" in p or "mount" in p:
-                self.warn(f"mirror: {p.get('_name')} is mounted on turret/barrel {p.get('mountTurret', p.get('mount'))}; "
+            if "mountTurret" in p or "mount" in p or "mountPart" in p:
+                self.warn(f"mirror: {p.get('_name')} is mounted on turret/barrel/part "
+                          f"{p.get('mountTurret', p.get('mount', p.get('mountPart')))}; "
                           "the copy stays on the SAME mount (build the other side's mount explicitly, as jaws() does)")
             q = {k: v for k, v in p.items() if k not in ("order", "editor", "_name")}
             if kind == "shape" or kind == "turret":
@@ -601,21 +708,36 @@ class Tank(_mechanics()):
         turrets = [d for k, d in self.parts if k == "turret"]
         barrels = [d for k, d in self.parts if k == "barrel"]
 
-        def world_corners(kind, d):
-            """Corners in the tank frame; parts on a turret are placed at the turret's rest angle,
-            parts on a barrel at that barrel's midpoint."""
-            pts = self._corners(kind, d)
+        shapes = [d for k, d in self.parts if k == "shape"]
+
+        def base_frame(d, depth=0):
+            """(origin, angle) of the frame a part draws in: a turret's, a barrel's midpoint, a carrier
+            shape's centre (chained), or the hull's."""
             if "mountTurret" in d and 0 <= d["mountTurret"] < len(turrets):
                 t = turrets[d["mountTurret"]]
-                ox, oy, a = t.get("xOffset", 0), t.get("yOffset", 0), t.get("angle", 0)
-            elif "mount" in d and 0 <= d["mount"] < len(barrels):
+                return (t.get("xOffset", 0), t.get("yOffset", 0)), t.get("angle", 0)
+            if "mount" in d and 0 <= d["mount"] < len(barrels):
                 b = barrels[d["mount"]]
                 a = b.get("angle", 0)
                 mx = b.get("startDistance", 0) + b.get("distance", BARREL_LENGTH) / 2
                 my = b.get("offset", 0)
-                ox, oy = mx * math.cos(a) - my * math.sin(a), mx * math.sin(a) + my * math.cos(a)
-            else:
+                return (mx * math.cos(a) - my * math.sin(a), mx * math.sin(a) + my * math.cos(a)), a
+            mp = d.get("mountPart", -1)
+            if isinstance(mp, int) and 0 <= mp < len(shapes) and depth < 6:
+                c = shapes[mp]
+                (ox, oy), a = base_frame(c, depth + 1)
+                cx, cy = c.get("xOffset", 0), c.get("yOffset", 0)
+                return (ox + cx * math.cos(a) - cy * math.sin(a), oy + cx * math.sin(a) + cy * math.cos(a)), \
+                    a + c.get("angle", 0)
+            return (0.0, 0.0), 0.0
+
+        def world_corners(kind, d):
+            """Corners in the tank frame; parts on a turret are placed at the turret's rest angle,
+            parts on a barrel at that barrel's midpoint, parts riding a shape at that shape's centre."""
+            pts = self._corners(kind, d)
+            if "mountTurret" not in d and "mount" not in d and "mountPart" not in d:
                 return pts
+            (ox, oy), a = base_frame(d)
             return [(ox + x * math.cos(a) - y * math.sin(a), oy + x * math.sin(a) + y * math.cos(a)) for x, y in pts]
 
         for kind, d in self.parts:
@@ -670,11 +792,17 @@ class Tank(_mechanics()):
 
     def weapon(self, projectile=0, bullet_type=None, angle=0, offset=0, length=BARREL_LENGTH, gap=0,
                width=BARREL_WIDTH, muzzle=1, name=None, order=None, color=None, above=False,
-               invisible=False, auto_fire=False, **fields):
+               invisible=False, auto_fire=False, ride=None, **fields):
         """A firing barrel. Geometry in editor terms (degrees, length, gap, width in units);
         any spec field (reloadMultiplier, delay, numDrones, flags, ...) passes through.
         above=True draws it over the hull (flags.aboveBody); invisible=True fires without
-        being drawn; auto_fire=True fires without the player clicking (flags.forceFire)."""
+        being drawn; auto_fire=True fires without the player clicking (flags.forceFire).
+        ride=<shape> mounts it on a body shape (angle, gap and offset from the carrier's centre,
+        along it): a gun ring on a spinning plate, which turns with the plate and fires
+        (Confirmed in play 2026-10-06; the editor's tooltip saying it "fires nothing" is wrong)."""
+        ride = self._shape_index(ride)
+        if ride is not None:
+            fields["mountPart"] = ride
         if bullet_type is None:
             idx = projectile if isinstance(projectile, int) else projectile[0]
             bullet_type = self.projectiles[idx]["base"] if 0 <= idx < len(self.projectiles) else "bullet"
@@ -766,6 +894,10 @@ class Tank(_mechanics()):
                 tags += f" on turret {d['mountTurret']}"
             if "mount" in d:
                 tags += f" on barrel {d['mount']}"
+            if "mountPart" in d:
+                tags += f" on part {d['mountPart']}"
+            if d.get("fixedRotation"):
+                tags += " FIXED"
             if kind == "shape":
                 where = f"at ({num(d.get('xOffset', 0))}, {num(d.get('yOffset', 0))})"
                 what = f"{d['sides']}-gon r={num(d.get('size', SHAPE_SIZE))}" + (" star" if d.get("star") else "")
@@ -788,11 +920,14 @@ class Tank(_mechanics()):
             t["projectiles"] = self.projectiles
         t["invisibility"] = self.fields.get("invisibility", {"gain": INVIS_GAIN, "lossOnHit": INVIS_LOSS})
         t["statsMaxLevel"] = self.fields.get("statsMaxLevel", [7] * 8)
-        if self.parents:
+        if self.parents and not getattr(self, "boss_only", False):
             t["upgradesFrom"] = self.parents
         for k, v in self.fields.items():
             if k not in ("invisibility", "statsMaxLevel"):
                 t[k] = v
+        if getattr(self, "boss_only", False):
+            t["editor"] = dict(t.get("editor") or {}, boss=True)
+            t["statsMaxLevel"] = [7] * 8         # a boss plays every stat at 7; the panel is read-only (spec §1b)
         barrels = [d for k, d in self.parts if k == "barrel"]
         shapes = [d for k, d in self.parts if k == "shape"]
         turrets = [d for k, d in self.parts if k == "turret"]
@@ -814,11 +949,21 @@ class Tank(_mechanics()):
             self.warn(f"{len(barrels)} barrels: the editor keeps only {MAX_BARRELS}; the rest are dropped on import")
         if len(turrets) > MAX_TURRETS:
             self.warn(f"{len(turrets)} turrets: the editor keeps only {MAX_TURRETS}; the rest are dropped on import")
+        solid = sum(1 for s in shapes if s.get("collidable") and "mountPart" not in s)
+        if solid > MAX_COLLIDABLE:
+            self.warn(f"{solid} collidable shapes: the editor keeps the first {MAX_COLLIDABLE} hitboxes and makes the "
+                      "rest drawing-only (spec §8)")
         pieces = len(barrels) + len(shapes) + len(turrets) + sum(
             len(p.get(k) or []) for p in self.projectiles for k in ("parts", "barrels", "turrets"))
         if pieces > MAX_PIECES:
             self.warn(f"{pieces} pieces on the body and its projectiles: the game refuses more than {MAX_PIECES}")
         return t
+
+    def boss_tank(self, on=True):
+        """Mark this tank boss-only (editor.boss): out of the class tree and the starters, played only as a
+        boss, every stat at level 7 (spec §1b). Pack.boss(tank) does this by default."""
+        self.boss_only = bool(on)
+        return self
 
     def save(self, *a, **kw):
         return self.pack.save(*a, **kw)
@@ -869,6 +1014,10 @@ class Pack:
         self.hidden_shapes = None   # vanilla shape names to stop spawning
         self.starters = None        # tank ids (vanilla or this pack's) the player can spawn as
         self.shapes = []            # custom arena polygons (spec section 1a)
+        self.bosses = []            # custom bosses (spec section 1b): records that wrap a tank
+        self.hide_stock_bosses = None   # True: none of the lobby's five stock bosses spawn
+        self.hidden_bosses = None       # names of stock bosses that stop spawning
+        self.boss_rotation_ = None      # the lobby's boss clock while this pack is loaded
 
     def tank(self, name, level=45, parents=(), tank_id=None):
         t = Tank(self, name, level, parents, tank_id)
@@ -963,6 +1112,136 @@ class Pack:
         self.shapes.append(s)
         return sid
 
+    BOSS_BEHAVIOURS = ("charge", "hold", "kite", "shoot", "none")
+
+    def boss(self, tank, name=None, brain="simple", behaviour="charge", idle="wander", size=2, health=3000,
+             xp=30000, touch_damage=10, knockback=0.05, drift=0.5, turn=0, faces_forward=None, spot_range=1500,
+             charge_speed=0.8, keep=(0, 0), circle_radius=0, min_level=15, lead_shots=True, sees_invisible=False,
+             only_players=False, skill=0.7, retreat=0, ring=(0, 0.4), weight=1, message=None, neutral=True,
+             claimable=True, boss_id=None, boss_only=True, **raw):
+        """A custom boss (spec §1b, the editor's Bosses tab, 2026-10-06): a pack-level record that wraps
+        `tank`, a Tank of this pack, a stock tank's name or vanilla id (a giant stock Octo Tank). The
+        arguments are the editor's own labels:
+          brain: "simple" (drifts, rams, shoots; in play it engages only inside spot_range and does not
+                 pursue) or "bot" (plays like a sandbox bot with the body's guns; `skill` 0-1, `retreat`
+                 0-0.9 = backs off under that much health, 0 fights to the death; in its one test it mostly
+                 wandered: offer it as an experiment)
+          behaviour, when it spots a player within `spot_range`: "charge" (and ram, at `charge_speed`),
+                 "hold" (stop and shoot), "kite" (keep distance `keep`=(near, far) and strafe), "shoot"
+                 (wander and shoot at them), "none" (ignore them: only its turrets and drones fight)
+          idle, when no one is near: "wander" or "circle" (the map centre, at `circle_radius`; 0 = from
+                 the map size, like the Guardian); `drift` is its speed (stock bosses 0.2-1), `turn` how
+                 fast it turns (0-2), faces_forward makes it face where it drifts
+          size: the scale of the tank and everything on it (1-4; stock bosses 1.55-2.87, Decade 2.87)
+          health / xp: 3000 / 30000 by default; Decade 10000 / 100000
+          touch_damage, knockback: body damage on touch (10) and knockback it takes (0.05)
+          min_level: it leaves players under this level alone (15; 0 attacks everyone)
+          ring: where it spawns, (from, to) as fractions of the map (0 centre); weight: how often, 0-100
+                 (0 = only by the console's spawn_boss)
+          message: what the arena announces when it spawns; neutral: on the shapes' team (bases ignore it;
+                 False makes a Fallen-style enemy that bases attack, needed for a necromancer boss);
+                 claimable: players can press H to take it over where the lobby allows
+          boss_only (default True): a Tank of this pack gets editor.boss, which takes it out of the class
+                 tree and fixes its stats at level 7; pass False to keep it playable too
+          raw: any other record key: minDamageMultiplier (a floor on shot damage; the game writes 4, 6 on
+                 Fallen Booster, and 6 bit clearly harder in play), ai=dict(...) merged, editor=...
+        The console name is the name lower-cased without spaces (`spawn_boss <name>`). The record is
+        written sparse, like the game's own export. Returns the record dict."""
+        if behaviour not in self.BOSS_BEHAVIOURS:
+            raise ValueError(f"behaviour must be one of {self.BOSS_BEHAVIOURS}")
+        if brain not in ("simple", "bot"):
+            raise ValueError("brain must be 'simple' or 'bot'")
+        if idle not in ("wander", "circle"):
+            raise ValueError("idle must be 'wander' or 'circle'")
+        if isinstance(tank, Tank):
+            if tank.pack is not self:
+                raise ValueError("boss: that tank belongs to another pack")
+            if boss_only:
+                tank.boss_tank(True)
+            tid, tname = tank, tank.name
+        elif isinstance(tank, str):
+            vid, st = _load("ref").stock_tank(tank)
+            if vid is None:
+                raise ValueError(f"boss: {tank!r} is not a stock tank")
+            tid, tname = vid, st["name"]
+        else:
+            tid, tname = int(tank), None
+        rec = {"tank": tid}
+        if boss_id is not None:
+            rec["id"] = int(boss_id)
+        rec["name"] = name or tname or "Boss"
+        if message:
+            rec["spawnMessage"] = message
+        if not neutral:
+            rec["neutralTeam"] = False
+        if not claimable:
+            rec["claimable"] = False
+        for key, val, dflt in (("maxHealth", health, 3000), ("xpBounty", xp, 30000), ("scale", size, 2),
+                               ("damageOnTouch", touch_damage, 10), ("knockbackMultiplier", knockback, 0.05)):
+            if val != dflt:
+                rec[key] = val
+        ai = {}
+        if drift != 0.5:
+            ai["floatSpeed"] = drift
+        if turn:
+            ai["rotationChangeSpeed"] = turn
+        if faces_forward:
+            ai["looksForward"] = True
+        if idle == "circle":
+            ai["hoverAroundCenter"] = True
+            if circle_radius:
+                ai["hoverRadius"] = circle_radius
+        if behaviour != "none":
+            ai["aggressiveCrashRadius"] = spot_range
+            if behaviour == "shoot":
+                ai["wanderWhileFighting"] = True
+            elif behaviour == "kite":
+                near, far = keep
+                if not far:
+                    raise ValueError("kite needs keep=(near, far) with far > 0")
+                ai["keepDistanceMin"], ai["keepDistanceMax"] = near, far
+            elif behaviour == "hold":
+                ai["aggressiveCrashSpeed"] = 0
+            elif charge_speed != 0.8:
+                ai["aggressiveCrashSpeed"] = charge_speed
+        if min_level != 15:
+            ai["minTargetLevel"] = min_level
+        if not lead_shots:
+            ai["leadShots"] = False
+        if sees_invisible:
+            ai["seesInvisible"] = True
+        if only_players:
+            ai["onlyPlayers"] = True
+        if brain == "bot":
+            ai["brain"] = "bot"
+            if skill != 0.7:
+                ai["botSkill"] = skill
+            if retreat:
+                ai["botRetreat"] = retreat
+        ai.update(raw.pop("ai", None) or {})
+        if ai:
+            rec["ai"] = ai
+        spawn = {}
+        if tuple(ring) != (0, 0.4):
+            spawn["from"], spawn["to"] = ring
+        if weight != 1:
+            spawn["weight"] = weight
+        if spawn:
+            rec["spawn"] = spawn
+        rec.update(raw)
+        self.bosses.append(rec)
+        return rec
+
+    def boss_rotation(self, every=45, first=45, max_alive=1, min_players=0, stock_weights=None):
+        """The lobby's boss clock while this pack is loaded (spec §1b): a boss every `every` minutes
+        (1-1440), the first after `first`, at most `max_alive` (1-6) at once, only with `min_players`
+        online; `stock_weights` {"Guardian": 0-100, ...} reweights the five stock bosses (0 keeps one out)."""
+        r = {"every": every, "first": first, "maxAlive": max_alive, "minPlayers": min_players}
+        if stock_weights:
+            r["stockWeights"] = dict(stock_weights)
+        self.boss_rotation_ = r
+        return r
+
     def spawn_shares(self):
         """Predicted share of the map's shape cap for every shape that spawns, with its crowding
         per area relative to the map average (spec 1a, "Spawn shares": a shape's share goes with
@@ -1011,9 +1290,19 @@ class Pack:
         if self.hidden_shapes:
             p["hiddenShapes"] = list(self.hidden_shapes)
         if self.starters:
-            p["starters"] = [self.id_of(t) if isinstance(t, Tank) else t for t in self.starters]
+            p["starters"] = [self.id_of(t) if isinstance(t, Tank) else t for t in self.starters
+                             if not (isinstance(t, Tank) and getattr(t, "boss_only", False))]
         if self.tanks or not self.shapes:   # the editor writes an arena-only pack with no tanks key
             p["tanks"] = [t.build(self.id_of(t)) for t in self.tanks]
+        if self.bosses:
+            p["bosses"] = [dict(b, tank=self.id_of(b["tank"]) if isinstance(b["tank"], Tank) else b["tank"])
+                           for b in self.bosses]
+        if self.hide_stock_bosses:
+            p["hideStockBosses"] = True
+        if self.hidden_bosses:
+            p["hiddenBosses"] = list(self.hidden_bosses)
+        if self.boss_rotation_:
+            p["bossRotation"] = self.boss_rotation_
         return p
 
     def slug(self):
@@ -1063,6 +1352,19 @@ class Pack:
                 print("spawn shares of the map's shape cap (about +-5 in 100; crowding per area, 1 = map average):")
                 for name, share, crowd in self.spawn_shares():
                     print(f"  {name:24} {share * 100:5.1f} %   crowding x{crowd:.2f}")
+                vp = _load("validate_pack")
+                sb = vp.shape_budget(pack.get("shapes") or [], set(pack.get("hiddenShapes") or []))
+                if sb["rows"]:
+                    worst = max(sb["rows"], key=lambda r: r[3])
+                    print(f"shape budget (the lobby refuses past it, spec 1a): room {sb['room']:.2f}/{vp.SHAPE_ROOM_LIMIT}, "
+                          f"worst crowding {worst[0]} {worst[3]:.2f}/{vp.SHAPE_CROWD_LIMIT}")
+            if pack.get("bosses"):
+                vp = _load("validate_pack")
+                names = {t["id"]: t["name"] for t in pack.get("tanks", [])}
+                for b in pack["bosses"]:
+                    print(vp.describe_boss(b, names))
+                print("  spawn one from the console: spawn_boss <name without spaces, lower-case>; Boss Auto-Spawn "
+                      "(admin panel) runs the rotation")
         errors = 0
         if validate:
             mod = _load("validate_pack")
@@ -1093,11 +1395,15 @@ def _load(name):
     return mod
 
 
-def Design(name, level=45, parents=(), author=None, pack_name=None, version=None):
+def Design(name, level=45, parents=(), author=None, pack_name=None, version=None, boss=False):
     """One-tank convenience: returns a Tank whose save() writes a pack named after it.
     `author` is the name shown in the editor; ask the user for it (omitted when None).
-    `version` is the pack's semantic version (SKILL.md §5a)."""
-    return Pack(pack_name or name, author, version=version).tank(name, level, parents)
+    `version` is the pack's semantic version (SKILL.md §5a). boss=True marks the tank boss-only
+    (editor.boss); add the boss record with d.pack.boss(d, ...) (spec §1b)."""
+    t = Pack(pack_name or name, author, version=version).tank(name, level, parents)
+    if boss:
+        t.boss_tank(True)
+    return t
 
 
 if __name__ == "__main__":
