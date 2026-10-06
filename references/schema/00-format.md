@@ -121,10 +121,12 @@ writes `aboveBody: false`).
    hatches a mix (§7); a projectile's own `color` beats `forcedBulletColor` (§7); `spawn_boss <name>`
    spawns a custom boss (§1b); probe 0.2.0 added that a hex colour's **alpha draws translucent** in
    play, over the hull and over arena shapes (§10), and that a **barrel riding a part turns with it
-   and fires** (§7, §8; the editor's tooltip "Looks only; it fires nothing" is wrong). Still open: the
-   **simple** and **bot** brains with custom guns; a boss from a **stock tank** at scale 4; the
-   rotation sentence after loading; what `minDamageMultiplier` changes (probe 0.3.0: three identical
-   one-gun boss tanks at 1 / absent / 6) and what `ai.directionChangeSpeed` does.
+   and fires** (§7, §8; the editor's tooltip "Looks only; it fires nothing" is wrong). Probe 0.3.0 settled `minDamageMultiplier`
+   (6 hurts clearly more than absent or 1: a damage floor, §1b) and showed the **simple** brain's charge
+   reacting only within its spot range, never pursuing, and the **bot** brain mostly wandering (§1b).
+   Still open: a boss from a **stock tank** at scale 4 (spawned, not studied); the rotation sentence
+   after loading; what `ai.directionChangeSpeed` does; whether a bot-brain boss engages with a "Charge"
+   behaviour or a higher skill.
 
 Resolved: Q1–9, Q11–19, Q21–26 of the original list, plus `preSpawn`, `burst`,
 `firesOnDeath`, `numBullets`, range-valued multipliers and `droneControllable` found along

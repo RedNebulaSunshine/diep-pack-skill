@@ -773,10 +773,15 @@ does not (render with `--boss` and look).
 
 **Which brain.** `simple` (the editor: "drifts, rams, shoots") is the stock bosses' brain: it
 drifts, turns toward a player it spots and fires every gun; its turrets and drones fight on their
-own. It suits a monster, a vehicle, a thing without a player's cunning. `bot` ("plays like a
-player") drives the body's guns like a sandbox bot, with `skill` 0–1 and `retreat` (backs off to
-recover under that much health; 0 fights to the death): it suits a rival tank, a duellist, a
-"dark version of you". A necromancer boss needs `neutral=False` to raise shapes.
+own. **In play (2026-10-06) a simple "Charge" boss kept to itself and only engaged a player inside
+its spot range; it did not pursue across the map, whatever its drift speed**, so a boss is a landmark
+that punishes what comes close, not a hunter: put it where players must pass (the centre, a prize
+ring) and give it `spot_range` 2000 (the maximum) if it should notice them sooner. It suits a monster,
+a vehicle, a thing without a player's cunning. `bot` ("plays like a player") drives the body's guns
+like a sandbox bot, with `skill` 0–1 and `retreat` (backs off to recover under that much health; 0
+fights to the death): meant for a rival tank, a duellist, a "dark version of you", but **in its one
+test (kite, skill 0.8) it mostly wandered and rarely engaged**; offer it as an experiment and default
+to `simple`. A necromancer boss needs `neutral=False` to raise shapes.
 
 **Which behaviour** (the editor's "When it spots a player", within `spot_range`, default 1500):
 - `charge` (and ram, at `charge_speed`): a bull, a horseman, a cannonball with legs;
@@ -799,10 +804,12 @@ delivery. A boss from a **stock tank** needs no tank in the pack: `pack.boss("Oc
 one tank share a name and `spawn_boss` cannot tell them apart (play 2026-10-06); a variant boss
 gets its own tank copy.
 
-**Open in play** (spec §13 item 22): the simple and bot brains with custom guns; `minDamageMultiplier`
-(4 on the stock records, 6 on Fallen Booster; a damage floor is the guess); whether a boss copy's
-cursor pivots and living limbs do anything under an AI driver (expect living limbs to track
-targets, cursor pivots to rest).
+**`minDamageMultiplier`** (4 on the stock records, 6 on Fallen Booster) is a floor on shot damage: at 6 a
+one-gun boss killed a maxed-regen Tank in 11 shots against 16 with the key absent (play 2026-10-06).
+Write it (`minDamageMultiplier=4`, as the game does) on a boss whose shots must bite.
+**Open in play** (spec §13 item 22): whether a boss copy's cursor pivots and living limbs do anything
+under an AI driver (expect living limbs to track targets, cursor pivots to rest); whether the bot
+brain engages with "Charge" or a higher skill.
 
 ## 35. Parts that ride parts: moons, a wheel, a gun ring, a chained tail
 

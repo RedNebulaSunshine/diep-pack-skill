@@ -1122,8 +1122,10 @@ class Pack:
         """A custom boss (spec §1b, the editor's Bosses tab, 2026-10-06): a pack-level record that wraps
         `tank`, a Tank of this pack, a stock tank's name or vanilla id (a giant stock Octo Tank). The
         arguments are the editor's own labels:
-          brain: "simple" (drifts, rams, shoots) or "bot" (plays like a sandbox bot with the body's guns;
-                 `skill` 0-1, `retreat` 0-0.9 = backs off under that much health, 0 fights to the death)
+          brain: "simple" (drifts, rams, shoots; in play it engages only inside spot_range and does not
+                 pursue) or "bot" (plays like a sandbox bot with the body's guns; `skill` 0-1, `retreat`
+                 0-0.9 = backs off under that much health, 0 fights to the death; in its one test it mostly
+                 wandered: offer it as an experiment)
           behaviour, when it spots a player within `spot_range`: "charge" (and ram, at `charge_speed`),
                  "hold" (stop and shoot), "kite" (keep distance `keep`=(near, far) and strafe), "shoot"
                  (wander and shoot at them), "none" (ignore them: only its turrets and drones fight)
@@ -1141,7 +1143,8 @@ class Pack:
                  claimable: players can press H to take it over where the lobby allows
           boss_only (default True): a Tank of this pack gets editor.boss, which takes it out of the class
                  tree and fixes its stats at level 7; pass False to keep it playable too
-          raw: any other record key (minDamageMultiplier, ai=dict(...) merged, editor=...).
+          raw: any other record key: minDamageMultiplier (a floor on shot damage; the game writes 4, 6 on
+                 Fallen Booster, and 6 bit clearly harder in play), ai=dict(...) merged, editor=...
         The console name is the name lower-cased without spaces (`spawn_boss <name>`). The record is
         written sparse, like the game's own export. Returns the record dict."""
         if behaviour not in self.BOSS_BEHAVIOURS:
