@@ -1,9 +1,25 @@
 ## 10. Colour palette
 
-`color` fields on body, body shapes, barrels and projectiles are indices into the game's
-palette (the one `net_replace_color` edits, ref §7). Hex values measured from the editor's
+`color` fields on body, body shapes, barrels, turret discs and projectiles are indices into the
+game's palette (the one `net_replace_color` edits, ref §7) **or, since the editor update of
+2026-10-06, an exact colour as a hex string** (below). Hex values measured from the editor's
 SVG export; **names are the editor's own swatch names** (hover text in the per-part colour
 picker, read off 2026-09-26), which is what to call colours when talking to the user.
+
+**Exact colours (Confirmed (editor code) 2026-10-06).** Every `color` field accepts a string
+`#rrggbb` or `#rrggbbaa` (case-insensitive; the editor stores it lower-cased) as well as an index
+0–27; anything else falls back to the field's default (27 for the body and projectiles, 0 for
+shapes, 1 for barrels and turrets). The picker gained **Custom color**, **Edit color**, a **Hex**
+box and an **Opacity** slider (the `aa` pair), and remembers the last 22 custom colours per browser
+(local storage, not in the pack). Exports write the value as stored, so a pack may carry hex
+strings anywhere a colour goes, and a custom arena shape's `color` must now be a *valid* hex string
+(else `#ffe869`). Two things are **not yet played** (§13 item 22): whether the game honours the
+alpha (a translucent part: a ghost, glass, a shadow), and what a 27 part shows on a hull painted a
+hex colour (the editor's preview resolves 27 to the hull's string, as it does for a palette hull;
+expect the same in play). `validate_pack.py` accepts both forms and warns on alpha until confirmed;
+`compose.C.rgb()`, `C.rgba()` and `C.alpha(C.cyan, 0.5)` write them. Prefer the palette where a
+swatch is close: players read the stock colours (yellow food, pink crashers, grey barrels), and a
+palette hull keeps the team-colour recipe below simple.
 
 | idx | editor name | hex | idx | editor name | hex | idx | editor name | hex |
 |---|---|---|---|---|---|---|---|---|
@@ -14,18 +30,20 @@ picker, read off 2026-09-26), which is what to call colours when talking to the 
 | 4 | Red | `#F14E54` **red team slot** | 14 | Box | `#BBBBBB` | 24 | Crimson | `#B5323A` |
 | 5 | Purple | `#BF7FF5` **purple team slot** | 15 | *(not offered)* | `#999999` | 25 | Forest | `#2E9E5B` |
 | 6 | Green | `#00E16E` **green team slot** | 16 | Orange | `#FCC376` | 26 | Plum | `#7B4FA8` |
-| 7 | Shiny | `#8AFF69` | 17 | *(not offered)* | `#999999` | 27 | "same color as the body" | **owner / team colour** |
+| 7 | Shiny | `#8AFF69` | 17 | **Fallen** | `#C0C0C0` (offered since 2026-10-06; the Fallen bosses' grey) | 27 | "same color as the body" | **the hull's colour; the team's when the hull is team-coloured** |
 | 8 | Yellow | `#FFE869` square | 18 | Cyan | `#35C5DB` | 28 | *(not offered)* | `#999999` |
 | 9 | Salmon | `#FC7677` triangle | 19 | White | `#FFFFFF` | 29 | *(not offered)* | `#999999` |
 
-The picker lists its 23 swatches in this order: White, Box, Cannon, Border (grey),
+The picker lists its 24 swatches in this order: White, Box, Cannon, Border (grey),
 Charcoal, Red, Crimson, Salmon, Orange, Brown, Yellow, Shiny, Green, Mint, Forest, Cyan,
-Teal, Blue, Indigo, Periwinkle, Purple, Plum, Pink. The six indices it does not offer (3,
-12, 15, 17, 28, 29) are the `#999999` slots; "Cannon" writes 1, the index every stock barrel
+Teal, Blue, Indigo, Periwinkle, Purple, Plum, Pink, and since 2026-10-06 **Fallen** (17,
+`#C0C0C0`, the hull colour of the game's Fallen Booster and Fallen Overlord boss tanks), then
+Custom color. The five indices it does not offer (3, 12, 15, 28, 29) are the `#999999` slots;
+"Cannon" writes 1, the index every stock barrel
 uses (Confirmed 2026-09-29 from the editor's swatch table, which maps each name above to the
 index in this table; an index it does not know draws `#999999`). 27 is
-used by every official missile barrel and renders as the owner's colour; treat it as "team
-colour".
+used by every official missile barrel and renders as the hull's colour, the team's on a
+team-coloured hull; treat it as "same color as the body".
 
 **In the live game 3–6 are the four team slots and are dynamic** (Confirmed 2026-09-26, a
 grey-hulled test tank with octagons coloured 2, 3, 4, 5, 6, 27, 9, 24, swapping teams in

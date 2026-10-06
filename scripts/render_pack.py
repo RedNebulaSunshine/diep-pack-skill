@@ -5,6 +5,8 @@ Usage:
   python render_pack.py <pack> [--out DIR] [--size PX] [--heading up|right|svg] [--svg]
                                [--sheet] [--no-grid] [--projectiles]
 
+--boss also draws every boss record's tank at the boss's scale beside a plain level-1 tank for size
+(files <pack>-boss-<name>.png; spec section 1b).
 --projectiles also draws every projectile that carries parts, sub-barrels or turrets (a web,
 a chick, a summoned warrior) as if it were a tank: its disc is a hull of radius 50 (the
 frame projectile parts are drawn in, spec section 5b), polygon projectiles at 1.3 x like a
@@ -30,10 +32,11 @@ import sys
 PALETTE = [
     "#555555", "#999999", "#00B2E1", "#999999", "#F14E54", "#BF7FF5", "#00E16E", "#8AFF69",
     "#FFE869", "#FC7677", "#768DFC", "#F177DD", "#999999", "#43FF91", "#BBBBBB", "#999999",
-    "#FCC376", "#999999", "#35C5DB", "#FFFFFF", "#3D3D3D", "#12A5A5", "#4A57C8", "#A9724A",
+    "#FCC376", "#C0C0C0", "#35C5DB", "#FFFFFF", "#3D3D3D", "#12A5A5", "#4A57C8", "#A9724A",
     "#B5323A", "#2E9E5B", "#7B4FA8", "#00B2E1", "#999999", "#999999",
 ]
-OWNER_COLOR = 2          # index 27 renders as the owner's colour; we show the player blue
+OWNER_COLOR = 2          # index 27 on a team-coloured hull is the team colour; we show the player blue
+# index 17 is "Fallen" (#C0C0C0) since the editor update of 2026-10-06 (spec section 10)
 HULL_RADIUS = 50
 BARREL_LENGTH = 95
 BARREL_HALF_WIDTH = 21   # default width 42
@@ -48,18 +51,28 @@ GRID_COLOUR = (190, 190, 190)
 
 
 def hexrgb(h):
-    return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+    """'#rrggbb' -> (r, g, b); '#rrggbbaa' -> (r, g, b, a) with a in 0-255 (spec section 10, 2026-10-06)."""
+    rgb = tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+    return rgb + (int(h[7:9], 16),) if len(h) == 9 else rgb
+
+
+def is_hex(c):
+    return isinstance(c, str) and len(c) in (7, 9) and c[0] == "#" and all(ch in "0123456789abcdefABCDEF" for ch in c[1:])
 
 
 def stroke_of(rgb):
-    return tuple(round(c * STROKE_FACTOR) for c in rgb)
+    return tuple(round(c * STROKE_FACTOR) for c in rgb[:3]) + tuple(rgb[3:])
 
 
 def palette_rgb(idx, default, owner=None):
-    """Palette index -> rgb. 27 is the owner colour: the game shows the team colour (we show
-    player blue); the editor's exporter shows the hull's own `color`, passed as `owner`."""
+    """A colour value -> rgb (or rgba when a hex string carries alpha). A palette index, or since
+    2026-10-06 a hex string '#rrggbb' / '#rrggbbaa'. 27 is "same color as the body": the hull's own
+    colour when the hull has one (spec section 10, Confirmed in play 2026-09-30), else the team colour,
+    for which we show player blue. `owner` is the hull's resolved colour (None = team-coloured hull)."""
     if idx is None:
         idx = default
+    if is_hex(idx):
+        return hexrgb(idx)
     if idx == 27:
         if owner is not None:
             return owner
@@ -132,8 +145,20 @@ def barrel_above(b):
     return bool((b.get("flags") or {}).get("aboveBody"))
 
 
-def tank_ops(tank, exporter_quirks=False):
+def rides_part(d):
+    """The body shape index a part or barrel rides (`mountPart`, spec section 8), or -1. `mount` wins,
+    then `mountTurret`, as in the editor's import."""
+    mp = d.get("mountPart", -1)
+    if "mount" in d or "mountTurret" in d or not isinstance(mp, int) or isinstance(mp, bool) or mp < 0:
+        return -1
+    return mp
+
+
+def tank_ops(tank, exporter_quirks=False, aim=0.0):
     """Ordered draw ops: ("poly", points, rgb) and ("circle", (cx, cy), r, rgb).
+
+    `aim` is the world angle the tank's aim will be drawn at (the renderer's heading), so a part
+    with `fixedRotation` can keep its own angle in the world (spec section 8, 2026-10-06).
 
     Rules (spec section 9b; the human-pack exports of 2026-09-26 added the mounted-part,
     invisible, aboveBody-barrel, star, turret-size/colour and default-size rules):
@@ -147,18 +172,42 @@ def tank_ops(tank, exporter_quirks=False):
       * the turret disc has radius `baseSize` (default 25) and palette `color` (default 1)
       * a shape without `size` draws at 25; a star starts on an inner vertex (ratio 0.4)
       * `body.angle` rotates a polygon hull (the exporter writes it as a rotate transform)
-      * colour 27 is the owner colour: the game shows the team colour, the exporter the hull's
-        own `color` (exporter_quirks=True reproduces that)
+      * colour 27 is "same color as the body": the hull's own `color` when it has one (a palette
+        index or a hex string), else the team colour (player blue here); the exporter does the same
+      * a part or barrel with `mountPart: i` draws in body shape i's frame (its centre, rotated by
+        its angle), chains included; a riding shape has no hitbox, so it is drawn like any other
+      * a shape with `fixedRotation` keeps its angle in the world: here, angle minus `aim`
+      * a hex `color` may carry alpha; the op's colour is then rgba and the PNG blends it
     """
     ops = []
     barrels = tank.get("barrels") or []
     shapes = tank.get("bodyShapes") or []
     turrets = tank.get("turrets") or []
     body = tank.get("body") or {}
-    owner = palette_rgb(body.get("color"), 2) if exporter_quirks else None
+    owner = palette_rgb(body["color"], 2) if body.get("color") is not None and body.get("color") != 27 else None
 
     def colour(part, default):
         return palette_rgb(part.get("color"), default, owner)
+
+    def shape_angle(s):
+        a = float(s.get("angle", 0))
+        return a - aim if s.get("fixedRotation") else a
+
+    def part_frame(i, depth=0):
+        """The frame a part riding body shape i draws in: shape i's centre and angle, inside the frame
+        shape i itself sits in (the hull, a turret, a barrel's midpoint or another shape)."""
+        if not (0 <= i < len(shapes)) or depth > 5:
+            return Frame()
+        c = shapes[i]
+        base = Frame()
+        if "mount" in c and 0 <= c["mount"] < len(barrels) and "mountTurret" not in c:
+            base = barrel_mid_frame(barrels[c["mount"]], Frame())
+        elif "mountTurret" in c and 0 <= c["mountTurret"] < len(turrets):
+            t = turrets[c["mountTurret"]]
+            base = Frame((float(t.get("xOffset", 0)), float(t.get("yOffset", 0))), float(t.get("angle", 0)))
+        elif rides_part(c) >= 0 and rides_part(c) != i:
+            base = part_frame(rides_part(c), depth + 1)
+        return base.child((float(c.get("xOffset", 0)), float(c.get("yOffset", 0))), shape_angle(c))
 
     def mounted_on_barrel(i):
         """(order, kind, index) of parts carried by barrel i, in draw order."""
@@ -168,6 +217,11 @@ def tank_ops(tank, exporter_quirks=False):
                   if s.get("mount") == i and "mountTurret" not in s]
         return sorted(items)
 
+    def riding_frame(d, frame):
+        """The frame to draw `d` in: its carrier shape's frame when it rides one, else `frame`."""
+        r = rides_part(d)
+        return part_frame(r) if r >= 0 else frame
+
     def emit_barrel(i, frame, seen):
         if i in seen:
             return
@@ -175,6 +229,7 @@ def tank_ops(tank, exporter_quirks=False):
         b = barrels[i]
         if b.get("invisible"):
             return
+        frame = riding_frame(b, frame)
         # parts mounted on this barrel draw inside its group, at its midpoint: before the
         # barrel, or after it when flagged aboveBody (same rule as parts on a turret disc)
         sub = barrel_mid_frame(b, frame)
@@ -218,8 +273,8 @@ def tank_ops(tank, exporter_quirks=False):
                 emit_barrel(j, frame, seen) if kind == "barrel" else emit_shape(shapes[j], frame)
 
     def emit_shape(s, parent=None):
-        parent = parent or Frame()
-        frame = parent.child((float(s.get("xOffset", 0)), float(s.get("yOffset", 0))), float(s.get("angle", 0)))
+        parent = riding_frame(s, parent or Frame())
+        frame = parent.child((float(s.get("xOffset", 0)), float(s.get("yOffset", 0))), shape_angle(s))
         sides = int(s.get("sides", 0))
         size = float(s.get("size", SHAPE_SIZE))
         if sides <= 2:
@@ -258,7 +313,7 @@ def tank_ops(tank, exporter_quirks=False):
     # 2. hull
     sides = int(body.get("sides", 0))
     size = float(body.get("size", HULL_RADIUS))
-    rgb = palette_rgb(body.get("color"), 2)
+    rgb = owner if owner is not None else hexrgb(PALETTE[OWNER_COLOR])
     if sides <= 2:
         ops.append(("circle", (0.0, 0.0), size, rgb))
     else:
@@ -291,14 +346,14 @@ def ops_bbox(ops):
 HEADINGS = {"up": -math.pi / 2, "right": 0.0, "svg": -math.pi / 4}
 
 
-def render_png(tank, path, size_px=600, heading="up", grid=True, exporter_quirks=False, label=None):
+def render_png(tank, path, size_px=600, heading="up", grid=True, exporter_quirks=False, label=None, ops=None):
     try:
         from PIL import Image, ImageDraw
     except ImportError:
         raise SystemExit("Pillow is required for PNG output: pip install pillow")
     ss = 3
-    ops = tank_ops(tank, exporter_quirks)
     h = HEADINGS[heading]
+    ops = tank_ops(tank, exporter_quirks, aim=h) if ops is None else ops
     rops = []
     for op in ops:
         if op[0] == "poly":
@@ -329,18 +384,27 @@ def render_png(tank, path, size_px=600, heading="up", grid=True, exporter_quirks
             d.line([(0, Y), (W, Y)], fill=GRID_COLOUR, width=ss)
             gy += step
     sw = max(1, round(STROKE_WIDTH * scale * ss))
+    img = img.convert("RGBA")
     for op in rops:
+        fill = op[2] if op[0] == "poly" else op[3]
+        translucent = len(fill) == 4 and fill[3] < 255
+        # a translucent part (hex colour with alpha, spec section 10) is drawn on its own layer and
+        # blended, since ImageDraw overwrites instead of blending
+        layer = Image.new("RGBA", (W, W), (0, 0, 0, 0)) if translucent else None
+        dd = ImageDraw.Draw(layer) if translucent else ImageDraw.Draw(img)
         if op[0] == "poly":
             pts = [to_img(p) for p in op[1]]
-            d.polygon(pts, fill=op[2])
-            d.line(pts + [pts[0]], fill=stroke_of(op[2]), width=sw, joint="curve")
+            dd.polygon(pts, fill=fill)
+            dd.line(pts + [pts[0]], fill=stroke_of(fill), width=sw, joint="curve")
             # round caps at the start vertex so the closed loop has no notch
             r = sw / 2
-            d.ellipse([pts[0][0] - r, pts[0][1] - r, pts[0][0] + r, pts[0][1] + r], fill=stroke_of(op[2]))
+            dd.ellipse([pts[0][0] - r, pts[0][1] - r, pts[0][0] + r, pts[0][1] + r], fill=stroke_of(fill))
         else:
             (px, py), r = to_img(op[1]), op[2] * scale * ss
-            d.ellipse([px - r, py - r, px + r, py + r], fill=op[3], outline=stroke_of(op[3]), width=sw)
-    out = img.resize((size_px, size_px), Image.LANCZOS)
+            dd.ellipse([px - r, py - r, px + r, py + r], fill=fill, outline=stroke_of(fill), width=sw)
+        if translucent:
+            img = Image.alpha_composite(img, layer)
+    out = img.convert("RGB").resize((size_px, size_px), Image.LANCZOS)
     if label:
         ImageDraw.Draw(out).text((8, 6), label, fill=(40, 40, 40))
     out.save(path)
@@ -374,16 +438,21 @@ def render_svg(tank, exporter_quirks=False):
     side = max(x1 - x0, y1 - y0) + 20
     vx, vy = (x0 + x1) / 2 - side / 2, (y0 + y1) / 2 - side / 2
     parts = []
+    def paint(rgb):
+        fill, st = "#%02X%02X%02X" % tuple(rgb[:3]), "rgb(%d, %d, %d)" % tuple(stroke_of(rgb)[:3])
+        op_ = f' opacity="{rgb[3] / 255:.3f}"' if len(rgb) == 4 and rgb[3] < 255 else ""
+        return fill, st, op_
+
     for op in ops:
         if op[0] == "poly":
             pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in op[1])
-            fill, st = "#%02X%02X%02X" % op[2], "rgb(%d, %d, %d)" % stroke_of(op[2])
-            parts.append(f'<polygon points="{pts}" fill="{fill}" stroke="{st}" stroke-width="{STROKE_WIDTH}"/>')
+            fill, st, op_ = paint(op[2])
+            parts.append(f'<polygon points="{pts}" fill="{fill}" stroke="{st}" stroke-width="{STROKE_WIDTH}"{op_}/>')
         else:
             (cx, cy), r = op[1], op[2]
-            fill, st = "#%02X%02X%02X" % op[3], "rgb(%d, %d, %d)" % stroke_of(op[3])
+            fill, st, op_ = paint(op[3])
             tr = f' transform="translate({cx:.1f} {cy:.1f})"' if (abs(cx) > 1e-6 or abs(cy) > 1e-6) else ""
-            parts.append(f'<circle{tr} r="{r:g}" fill="{fill}" stroke="{st}" stroke-width="{STROKE_WIDTH}"/>')
+            parts.append(f'<circle{tr} r="{r:g}" fill="{fill}" stroke="{st}" stroke-width="{STROKE_WIDTH}"{op_}/>')
     return (f'<svg viewBox="{vx:.1f} {vy:.1f} {side:.1f} {side:.1f}" stroke-linejoin="round" '
             f'xmlns="http://www.w3.org/2000/svg" width="512" height="512"><g transform="rotate(-45)">'
             + "".join(parts) + "</g></svg>")
@@ -487,7 +556,7 @@ def compare(pack, svg_path, tol=0.3):
             if a[0] != b[0]:
                 problems.append(f"#{k}: {a[0]} vs {b[0]}")
                 continue
-            fa = "#%02X%02X%02X" % (a[2] if a[0] == "poly" else a[3])
+            fa = "#%02X%02X%02X" % tuple((a[2] if a[0] == "poly" else a[3])[:3])
             if fa != b[2 if b[0] == "poly" else 3].upper():
                 problems.append(f"#{k}: fill {fa} vs {b[2 if b[0] == 'poly' else 3]}")
             if a[0] == "poly":
@@ -530,6 +599,26 @@ def projectile_as_tank(tank, i):
             "turrets": pr.get("turrets") or []}
 
 
+def boss_scene(pack, boss, heading="up"):
+    """Draw ops for a boss record (spec section 1b): its tank scaled by `scale` (the editor scales the
+    tank and everything on it) with a plain level-1 tank beside it for size. Returns (ops, label) or
+    None when the boss's tank is not in the pack (a stock-tank boss is not drawn: no stock roster here)."""
+    tanks = {t.get("id"): t for t in pack.get("tanks") or []}
+    t = tanks.get(boss.get("tank"))
+    if t is None:
+        return None
+    k = float(boss.get("scale", 2))
+    ops = tank_ops(t, aim=HEADINGS[heading])
+    scaled = [("poly", [(x * k, y * k) for x, y in op[1]], op[2]) if op[0] == "poly"
+              else ("circle", (op[1][0] * k, op[1][1] * k), op[2] * k, op[3]) for op in ops]
+    x0, y0, x1, y1 = ops_bbox(scaled)
+    # the reference tank: hull 50 and a stock barrel, off to the tank's right at the picture's edge
+    off = (0.0, y1 + 50 + 60)
+    ref = [("poly", [(x + off[0], y + off[1]) for x, y in barrel_points({}, Frame())], hexrgb(PALETTE[1])),
+           ("circle", off, float(HULL_RADIUS), hexrgb(PALETTE[OWNER_COLOR]))]
+    return ref + scaled, f"{boss.get('name') or 'Boss'} boss x{k:g} (next to a level-1 tank)"
+
+
 def decorated_projectiles(tank):
     """Indexes of the tank's projectiles that carry parts, sub-barrels or turrets."""
     return [i for i, pr in enumerate(tank.get("projectiles") or [])
@@ -537,7 +626,7 @@ def decorated_projectiles(tank):
 
 
 def render_pack(pack, out_dir, size_px=600, heading="up", grid=True, svg=False, sheet=False,
-                projectiles=False):
+                projectiles=False, bosses=False):
     os.makedirs(out_dir, exist_ok=True)
     # renders keep the unversioned name, so they always show the latest iteration (SKILL.md §5a)
     base = slug(re.sub(r"\s+v\d+\.\d+\.\d+$", "", pack.get("name", "pack")))
@@ -567,6 +656,13 @@ def render_pack(pack, out_dir, size_px=600, heading="up", grid=True, svg=False, 
                     with open(sp, "w", encoding="utf-8") as f:
                         f.write(render_svg(pt))
                     paths.append(sp)
+    if bosses:
+        for b in pack.get("bosses") or []:
+            scene = boss_scene(pack, b, heading) if isinstance(b, dict) else None
+            if scene:
+                bp = os.path.join(out_dir, f"{base}-boss-{slug(b.get('name') or 'boss')}.png")
+                render_png({}, bp, size_px, heading, grid, label=scene[1], ops=scene[0])
+                paths.append(bp)
     if sheet and len(pack.get("tanks", [])) > 1:
         paths.append(render_sheet(pack["tanks"], os.path.join(out_dir, base + "-sheet.png"), heading=heading))
     return paths
@@ -594,7 +690,7 @@ def main(argv):
     out = opt("--out", os.path.join(os.path.dirname(os.path.abspath(argv[1])), "renders"))
     paths = render_pack(pack, out, int(opt("--size", 600)), opt("--heading", "up"),
                         grid="--no-grid" not in args, svg="--svg" in args, sheet="--sheet" in args,
-                        projectiles="--projectiles" in args)
+                        projectiles="--projectiles" in args, bosses="--boss" in args)
     for p in paths:
         print(p)
     return 0

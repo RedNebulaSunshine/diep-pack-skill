@@ -1,9 +1,9 @@
 ---
 name: diep-pack
-description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor, from a plain-English description or from a picture (a sketch of the tank with arrows and notes, a drawing or photo of the subject, a screenshot of a tank): tanks (barrels, projectiles, drones, traps, homing missiles, turrets, body shapes, stealth, stats, upgrade-tree placement), figurative tanks built from many parts (dragonfly, crab, starship), and themed arenas of custom shapes (food, crashers, walls, prizes, bosses, spawn zones and weights). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves this game can perform (a sword that swings, a sidekick that follows, eggs that hatch), then pitches them in one question before building. Use whenever the user wants to create, tweak or edit a custom Diep.io tank, a line of tanks, or the arena, including when they attach an image and say make this or turn my drawing into a tank. Also handles edit PACK: CHANGE."
+description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor, from a plain-English description or a picture (a sketch, a drawing or photo of the subject, a screenshot of a tank): tanks (barrels, projectiles, drones, traps, homing missiles, turrets, body shapes, stealth, stats, tree placement), figurative tanks built from many parts (dragonfly, crab, starship), custom bosses the arena spawns (a boss copy of any tank), exact colours, parts that orbit a spinning part, and themed arenas of custom shapes (food, crashers, walls, prizes). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves the game can perform (a sword that swings, a sidekick that follows, eggs that hatch), then pitches them in one question before building. Use whenever the user wants to create, tweak or edit a Diep.io tank, a line of tanks, a boss or the arena, also from an attached image (make this, turn my drawing into a tank). Edit mode: PACK: CHANGE."
 license: MIT
 metadata:
-  version: "1.7.0"
+  version: "1.8.0"
   repository: "https://github.com/RedNebulaSunshine/diep-pack-skill"
   requires: "Python 3.8+; Pillow for PNG renders (optional)"
 ---
@@ -172,7 +172,20 @@ Then turn the description and the moves into a design sheet before writing JSON:
   reach (`punch`), a sword sweep (`blade`), class-folder nodes (`folder`).
 - Pack-level: `starters`, `hidden` for a total conversion (spec §1); custom arena `shapes` and
   `hiddenShapes` through `references/arena.md` (built when the request is about the map,
-  offered in one line after a themed tank).
+  offered in one line after a themed tank); **bosses** (spec §1b, recipes §34): a boss is a
+  pack-level record wrapping a tank, `Pack.boss(tank, brain=, behaviour=, idle=, size=, health=,
+  xp=, ring=, weight=)`, usually a boss-only copy (`editor.boss`) of a figurative tank, drawn at
+  its scale with every stat at 7; "a boss", "a raid", "a guardian of the arena", "something the
+  map spawns" are boss requests, not boss-shape requests any more.
+- **Parts that ride parts and parts that hold still** (spec §8, recipes §35): `shape(ride=plate)`
+  puts a part on another part, so a spinning carrier swings it round (`orbit()` for moons, a
+  wheel, a clock; `gun_ring()` for guns on a spinning plate, whose firing is a play question);
+  chains nest four deep and riders have no hitbox. `shape(fixed=True)` keeps a part's angle in
+  the world (`base()` for a dominator base, `compass()` for a needle). Eight collidable parts per
+  tank now, three per projectile.
+- **Colour**: the palette by default (players read the stock colours and the team recipe stays
+  simple); exact hex colours when the subject needs them (recipes §36), `C.rgb()`, `C.rgba()`,
+  `C.alpha()`; opacity is unconfirmed in play, so it is an offer, never a default.
 - Balance: scale `damageMultiplier` down as barrel count goes up, like the stock ring tanks.
 - **Motion is a question, not a default.** Almost any part can move, and players love it:
   the motion map in `figurative.md` §5 lists what moves (pistons with `animate` and
@@ -246,6 +259,15 @@ host's structured-question tool if it has one; otherwise plain text):
 - **The arena** (a request about the map or a themed pack): the pitch of `arena.md` §1 step
   7, one plain line per shape (role, look, where it spawns), marked Recommended, and whether
   the vanilla shapes stay. For an arena-only request skip level and parent.
+- **A boss** (a request for one, or a figurative tank that would make a good one): its brain
+  (simple: drifts, rams, shoots; or bot: plays like a player with the body's guns) and its
+  behaviour when it spots a player (charge and ram / stop and shoot / keep distance / wander and
+  shoot / ignore them, only its turrets and drones fight), its size against the stock bosses
+  (1.5–2.9) and how it spawns (the rotation, or console only), one line, marked Recommended. A
+  boss copy of a playable tank is an offer at the end of a figurative build, not a default.
+- **Exact colours or the palette?** only when the subject has a colour the palette lacks (a
+  brand, a flag, a real animal's coat): one line offering the exact colours, Recommended where it
+  matters, with the palette as the alternative. Opacity (a ghost, glass) is offered as untested.
 - **Level**: 15 / 30 / 45 / 60 (or a number the user gave).
 - **Parent tank(s)** by name, from `vanilla-tanks.md`; multiple parents allowed.
 - **Author name**: the name the editor shows on the pack. Remember it for the rest of the
@@ -362,6 +384,10 @@ When the tank is meant to *look like something*, do not hand-type coordinates. F
 Simple weapon tanks (a few barrels, no picture to match) can still be written as JSON
 directly, but render them too (step 5) before delivering.
 
+A **boss** renders at its scale with `render_pack.py --boss` (one picture per boss record, next to
+a plain level-1 tank for size): read it to judge whether a 2× or 3× figure still reads at a
+distance (small details vanish; big shapes, strong contrast and few colours carry).
+
 ## 5. Write, validate, render
 
 Save as one line of compact JSON to `./output/<slug>-<version>.diep-pack` (slug = lower-case
@@ -427,9 +453,11 @@ Reply with, in this order:
    `json` code block for packs under about 2 KB. Do not paste longer packs into the reply:
    terminals wrap or truncate long single-line code blocks on copy and the result fails to
    parse in the game.
-2. **Recap**, a few bullets per tank: the signature moves first, each in plain words with
-   its button; level and parent(s); barrels by type; projectiles and what makes them special;
-   any guessed or Medium/Low-confidence fields, named. Run the check of `moves.md` §4 and
+2. **Recap**, a few bullets per tank, calling tanks by the editor's labels (**#C1, #C2 …** in pack
+   order, which is what the editor and `set_class c1` show since 2026-10-06): the signature moves
+   first, each in plain words with its button; level and parent(s); barrels by type; projectiles
+   and what makes them special; any guessed or Medium/Low-confidence fields, named. For a boss:
+   its brain and behaviour, size, health and spawn, and the console name (`spawn_boss <name>`). Run the check of `moves.md` §4 and
    end with one or two ideas not built, as offers ("Want R2-D2 swapped for a Force leap?"). For a
    figurative build add the render path and the part count, and name the design script. For a
    request with a picture add **From your drawing**: each note and how it was met, the front
@@ -442,7 +470,10 @@ Reply with, in this order:
    tank may offer at most 19 upgrades, stock ones included (Tank already has 6).
 4. **Try in game**: two or three concrete things to look at, in plain language ("hold fire
    and watch whether the rear pair alternates with the front pair"). One pack per message;
-   people test one thing at a time.
+   people test one thing at a time. For a boss: turn **Boss Auto-Spawn** on in the sandbox admin
+   panel (or `spawn_boss <name>` in the console; `set_boss <playerId> <name>` to become it; the
+   editor's Play button also plays any boss), then whether it spawns where and as often as
+   meant, what its brain does when a player comes close, and whether it is the right size.
 
 ## 7. Edit mode
 

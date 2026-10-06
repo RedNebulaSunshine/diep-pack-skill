@@ -93,14 +93,19 @@ untested idea (offer it as an experiment and name it as a guess in the recap).
 | **flaps, paddles, pumps, pedals** | parts that pump as it fires or moves | `animate()` (`forceFire` to move without a click) | C |
 | **slithers, streaks, leaves a trail** (snake, comet, slime, footprints) | a body or trail that follows its path | `trail()` | C |
 | **spins** (saw, drill, wheel, propeller, planet) | a part that turns forever | `spinSpeed` on a shape or the hull | C |
+| **orbits, circles, revolves** (moons, electrons, a clock's hands, lanterns on a wheel, satellites, a chained tail of beads) | parts that go round a part | `orbit(carrier, n, radius)`: riders on a spinning shape (`shape(ride=…)`, spec §8); guns on a spinning plate with `gun_ring()` (whether riding guns fire is open) | H (editor code; orbit in play untested) |
+| **points one way whatever happens** (a compass, a weathervane, a dominator's base, a shadow, a crown that stays level) | a part that keeps its heading while the tank turns | `compass()`, `base()`: `shape(fixed=True)` (only the angle is fixed, so centre it) | H (editor code) |
+| **is the boss, the raid, the arena's guardian, the thing the map sends at you** | an AI-driven giant the arena spawns on a timer and announces | `Pack.boss(tank, brain=, behaviour=, idle=, size=, health=, xp=, ring=, weight=)` on a boss copy of the figure (recipes §34); a necromancer boss needs `neutral=False` | H (editor code; the game's own six bosses are the example) |
+| **is see-through, ghostly, made of glass or smoke** | a translucent part | `C.alpha(colour, 0.5)` on the part (spec §10); **untested in play**: offer, never promise | try |
 | **glows, sparkles, is magic** | an aura of specks or orbiting motes; or a light that pulses | a sparkler (auto-firing spinning star specks), uncontrolled orbiting drones; for a pulse with no projectiles, `pulse()`: two counter-rotating star shapes on one spot (figurative.md §5) | C; pulse likely |
 | **sees far** (sniper, lookout, telescope) | a wider view or a scope | `sniper()` zoom, `scope()` | C |
 | **grows up, powers up, transforms** | the story as an upgrade line | a multi-tank line (padawan → knight → master) | C |
 
 **What the format cannot do** (offer the nearest substitute): heal, slow, freeze, stun or
 poison over time (no status effects: use colour and a spray); pull toward you; a
-projectile that returns to its owner; a chain of joints that bend one after another
-(`figurative.md` §5); writing words. Never promise these.
+projectile that returns to its owner; a chain of joints that bend one after another on their own
+(parts can now ride parts four deep, so a chain *spins* as one piece or orbits, but still does not
+flex: `figurative.md` §5); writing words. Never promise these.
 
 ## 3. Worked pitches
 

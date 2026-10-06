@@ -1166,6 +1166,66 @@ class Mechanics:
                            speedMultiplier=0, bulletSizeMultiplier=size, reloadMultiplier=reload, spreadMultiplier=0,
                            lifetime=lifetime, recoilMultiplier=0, initialVelocityMultiplier=0.5, **over)
 
+    # --- parts that ride parts, and parts that keep their heading (the editor update of 2026-10-06) ----
+    def orbit(self, carrier, n=3, radius=60, sides=0, size=10, color=None, spin=0.03, start=0, above=None,
+              name="moon", **kw):
+        """`n` small shapes riding `carrier` (the dict a shape() call returned) on a circle of `radius`
+        around its centre, so that when the carrier spins they orbit it: moons round a planet, electrons
+        round a nucleus, lanterns on a wheel, a clock's hands (n=2 with different radii). The carrier is
+        given `spin` (per tick; 0.03 is one turn in about 8 s) unless it already spins or spin=0; make the
+        carrier the planet itself, or a hidden disc (size 1, no colour) at the centre of the orbit. Riders
+        are looks only (no hitbox, spec §8); `above` defaults to the carrier's own layer. Returns the list.
+        Confirmed in the editor's code; the orbit in play is a Phase-3 test (2026-10-06)."""
+        if spin and not carrier.get("spinSpeed"):
+            carrier["spinSpeed"] = spin
+        if above is None:
+            above = bool(carrier.get("aboveBody"))
+        out = []
+        for i in range(n):
+            ang = start + 360 * i / n
+            out.append(self.shape(sides, size, at=polar(radius, ang), angle=ang, color=color, above=above,
+                                  ride=carrier, name=f"{name} {i + 1}" if n > 1 else name, **kw))
+        return out
+
+    def gun_ring(self, carrier, n=4, radius=40, length=60, width=BARREL_WIDTH * 0.7, projectile=None, start=0,
+                 spin=0.02, damage=0.4, reload=1.5, name="ring gun", **over):
+        """`n` guns riding a spinning plate (`carrier`, a shape dict), pointing outward from its centre at
+        `radius`: the game's change notes call it "a rotating gun ring". The plate gets `spin` unless it
+        spins already. Whether a gun riding a part fires is a PLAY QUESTION as of 2026-10-06: the editor's
+        import budget counts it and the game's notes say it fires, but the editor's tooltip on such a barrel
+        reads "Looks only; it fires nothing"; save() notes it. Give the guns forceFire (auto_fire=True) if
+        the ring should spray on its own. Returns the barrels."""
+        p = self.bullet() if projectile is None else projectile
+        if spin and not carrier.get("spinSpeed"):
+            carrier["spinSpeed"] = spin
+        out = []
+        for i in range(n):
+            ang = start + 360 * i / n
+            stock = dict(damageMultiplier=damage, reloadMultiplier=reload)
+            out.append(self._gun(stock, ang, 0, radius, length, width, 1, f"{name} {i + 1}", p, False, None,
+                                 dict(over, ride=carrier)))
+        return out
+
+    def base(self, sides=4, size=None, color=0, name="base"):
+        """A dominator-style base: a polygon under the hull at the centre with fixedRotation, so it keeps
+        its heading in the world while the tank turns (spec §8, Confirmed editor code 2026-10-06; the
+        editor's own words: "like a dominator's base"). `size` defaults to a polygon that clears the hull
+        (hull 50 -> a square of 80, circumradius). Draws under the hull; drawn first so the hull paints over it."""
+        if size is None:
+            r = float(self.body.get("size", 50)) * (1.3 if int(self.body.get("sides", 0)) >= 3 else 1)
+            size = r * 1.6
+        return self.shape(sides, size, color=color, fixed=True, order=-1, name=name)
+
+    def compass(self, length=70, width=10, color=None, heading=0, size=6, name="needle"):
+        """A compass needle: a thin fixed-rotation triangle at the hull centre that keeps pointing `heading`
+        (degrees in the world: 0 = the direction the tank faces at spawn) while the tank turns, over the
+        hull. Only the ANGLE is fixed; a part placed off-centre still swings round with the aim, so put the
+        needle at the centre and let a hub (`size`) hide the pivot. Returns (needle, hub)."""
+        needle = self.shape(3, length / 2, at=(0, 0), angle=heading, color=color, above=True, fixed=True,
+                            name=name)
+        hub = self.circle(size, color=0, above=True, name=f"{name} hub")
+        return needle, hub
+
     def folder(self):
         """Turn this tank into a class-picker node (a player-built pack's folders for humans, monsters, animals, spiders:
         18 of its tanks): a hull of radius 1 with an imperceptible spin, health 1, body

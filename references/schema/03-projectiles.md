@@ -1,10 +1,12 @@
 ## 5. Projectile (`tanks[].projectiles[]`)
 
 Definitions indexed by position; a barrel fires the definition(s) its `projectile` field
-lists. Definitions may be shared or unused. **Editor limits** (its import code, 2026-09-29): 16
+lists. Definitions may be shared or unused. **Editor limits** (its import code, 2026-09-29,
+unchanged by the 2026-10-06 update): 16
 projectiles per tank; per projectile 32 barrels, 32 parts (of which at most 3 collidable, those
-at most size 150, the rest 300) and 8 turrets. Everything a projectile carries counts toward the
-tank's 96 pieces and multiplies its shot cost (§7a).
+at most size 150, the rest 300; a tank keeps 8 since 2026-10-06, a projectile still 3) and 8 turrets.
+Everything a projectile carries counts toward the tank's 96 pieces and multiplies its shot cost (§7a).
+A projectile's `parts` and sub-barrels take `mountPart` and `fixedRotation` like a tank's (§8).
 
 ```json
 {"name":"Missile","base":"bullet","sides":-1,"spin":0.1,"spinFlipsOnSecondary":true,
@@ -23,7 +25,7 @@ tank's 96 pieces and multiplies its shot cost (§7a).
 | `star` | bool | `true` | "Drawn as a star" for an "Its own" shape. | Confirmed |
 | `spin` | number | `0.1` (missiles), `-0.5` | Rotation per tick; sign = direction; **clamped to −0.5…0.5**. | Confirmed (editor code) |
 | `spinFlipsOnSecondary` | bool | `true` | Spin reverses while secondary fire is held — the Skimmer rule (ref §5). Official Skimmer and Cyclone carry it. | Confirmed |
-| `color` | int | `22`, `25` | Palette index (§10). Absent = team colour. Verified on drones: `color: 25` drones are forest green in game (2026-09-26). | Confirmed |
+| `color` | int \| string | `22`, `25`, `"#b5323a"` | Palette index (§10), or since 2026-10-06 a hex string `#rrggbb` / `#rrggbbaa`. Absent = team colour. Verified on drones: `color: 25` drones are forest green in game (2026-09-26). A barrel's `forcedBulletColor` with `flags.forceBulletColor` (§7, the stock bosses) is the other way to colour a shot; which wins is a play question. | Confirmed |
 | `burst` | object | `{"onSecondary":true,"onDestroyed":true,"onExpire":true}` | Editor section "Burst" with three checkboxes: `onSecondary` "Right click sets it off", `onDestroyed` "Getting destroyed sets it off", `onExpire` "Running out of time sets it off". "Setting off" **ends the projectile**; what happens then is decided by its sub-barrels: those flagged `firesOnDeath` (§6) fire once as it dies. Stock Firework ("Right click to explode your bullets") is a hexagonal shell with `burst.onSecondary` and 24 hidden `firesOnDeath` sub-barrels. In tests without `firesOnDeath` the projectile simply vanished on right-click, which matches. The reverse holds too: with no trigger set the editor says "Off: it just dies. Turn one on and guns on it can fire when it does", and its budget counts a `firesOnDeath` gun only when a trigger is set. A payload that must go off by itself near a target is not a burst at all but a turret gun with a long reload (recipes §33); `burst` then only ends the projectile early. | Confirmed |
 | `barrels` | Barrel[] | | Barrels carried by the projectile (§7). Their `projectile` indexes the **tank's** `projectiles[]`. Firing is governed by flags (§6): `forceFire` fires continuously (missiles), `firesOnDeath` fires once when the projectile dies (Firework), no flag fires on the owner's fire command (Factory minions; on a plain bullet this never fired in test) **unless the sub-barrel is on one of the projectile's `turrets`**: then it is an auto-turret gun and fires at targets on its own, with or without `forceFire`, until the projectile dies (Sentry test, 2026-09-26). **A projectile's barrel may fire only a projectile that carries nothing** (no barrels, parts or turrets) and is not the projectile itself; otherwise the editor swaps in a plain default shot of the barrel's type on import (round, in the owner's colour, nothing on it). Read from the editor's import code 2026-09-29, and it explains both earlier sightings: a projectile referencing itself came out as a default round bullet, and a croc-tail chain (2026-09-27) spawned one plain round stage without its `parts` and never a third. **Confirmed in play 2026-09-29** (SpongeBob): a Cyan bubble whose six `firesOnDeath` barrels fired a Cyan "Little bubble" carrying a White shine part popped into six **Yellow** bubbles (the body's colour) with no shine. Give a spawned shot no parts and it keeps its own colour and `sides` (confirmed the same day: without the shine the little bubbles came out Cyan). So chains are one level deep, and the spawned shot is a plain one. For a graded taper fire one tank barrel per stage with growing lifetimes (`d.trail(stages=…)`). A sub-barrel's `mountTurret` indexes the **projectile's** own `turrets[]` (§5b). | Confirmed |
 | `drone` | object | see §5a | Drone-only behaviour. | Confirmed |

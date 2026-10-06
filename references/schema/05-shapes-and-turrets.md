@@ -6,10 +6,12 @@
 {"sides":9,"size":136,"xOffset":142,"yOffset":-221,"collidable":true,"order":17,"color":26}
 ```
 
-**Editor limits** (its import code, 2026-09-29; the same for a projectile's `parts`): 32 shapes;
-`sides` at most 18; `xOffset` and `yOffset` within −800…800; `size` at most 300; **only the first
-three `collidable` shapes stay collidable**, the rest become drawing-only, and those three are
-capped at size 150. `validate_pack.py` warns on each.
+**Editor limits** (its import code, 2026-09-29, re-read 2026-10-06; the same for a projectile's
+`parts` except the hitbox count): 32 shapes; `sides` at most 18; `xOffset` and `yOffset` within
+−800…800; `size` at most 300; **only the first eight `collidable` shapes of a tank stay collidable**
+(three before the 2026-10-06 update; still **three** on a projectile), the rest become drawing-only,
+and the collidable ones are capped at size 150. A shape that rides another shape (`mountPart`) is
+never collidable. `validate_pack.py` warns on each.
 
 | Key | Type | Default | Meaning | Confidence |
 |---|---|---|---|---|
@@ -24,8 +26,10 @@ capped at size 150. `validate_pack.py` warns on each.
 | `aboveBody` | bool | false | Draw over the hull (Tenk, Cyclone, Ambusher carry a small grey square on top). Without it the hull always paints over parts (§9a). On a part with `mountTurret`, over the turret's disc. | Confirmed |
 | `mountTurret` | int | absent | `0`, `1`, `2` (the serpent's teeth, fangs and pupil; a skeleton's star hands) | Index into `turrets[]`: the shape rides the turret and turns with it, its offsets in the turret's frame. Drawn before the disc unless `aboveBody`. | Confirmed (drawing) |
 | `mount` | int | absent | `0` (a player-built tank: a triangle on the main barrel) | Index into `barrels[]`: the shape rides that barrel, offsets measured from the barrel's **midpoint** along its axis (same rule as barrel-on-barrel, §9b). | High |
+| `mountPart` | int | absent (−1) | | **Added 2026-10-06: parts ride on parts.** Index into this same `bodyShapes[]` (a projectile's `parts[]` for a part): the shape rides that shape, its `xOffset`/`yOffset` measured from the carrier's centre along the carrier's angle and its `angle` added to the carrier's, so when the carrier spins (`spinSpeed`) everything on it orbits: moons round a planet, lanterns on a wheel, a clock's hands, a chained tail of parts each riding the last. The editor's part form calls it "Rides on" and lists "What rides on it". Rules from the importer: `mount` wins, then `mountTurret`, then this; a bad index, a self-reference or a chain where the carrier already sits more than three deep is cleared to −1 ("Parts nest 4 deep at most": a root part and four riders); **a riding shape is looks only**: the importer clears its `collidable` flag, so put the hitbox on the carrier. Barrels take `mountPart` too (§7). The chain's root may itself sit on a turret or a barrel. | Confirmed (editor code); orbiting in play open (§13 item 22) |
+| `fixedRotation` | bool | false | | **Added 2026-10-06.** "Keeps its angle in the world instead of turning with the tank's aim, like a dominator's base." Only the **angle** is fixed: a part placed off-centre still swings round with the aim, so a dominator base or a compass needle sits at the centre. The editor's part form is now a **Rotation** choice: With the aim (the usual) / Fixed / Spins; its spin tooltip was reworded to "Turns on its own, in world space. Speed is rotation per tick; negative spins the other way, 0 is Fixed. The preview does not animate." | Confirmed (editor code) |
 | `staysVisible` | bool | false | `true` (a player-built glitch tank: a blue circle on an invisibility-enabled tank) | The part stays drawn while the tank is faded: eyes that give a stalker away. Confirmed in play 2026-09-26: a Yellow dot stayed visible while the hull and an ordinary Cyan dot faded. | Confirmed |
-| `color` | int | 0 (`#555555`) | Palette index (§10). Vanilla smasher hexagons and Spike triangles omit it and render `#555555` in the roster SVG, so the default is index 0, the dark smasher grey. | Confirmed |
+| `color` | int \| string | 0 (`#555555`) | Palette index (§10), or since 2026-10-06 a hex string `#rrggbb` / `#rrggbbaa`. Vanilla smasher hexagons and Spike triangles omit it and render `#555555` in the roster SVG, so the default is index 0, the dark smasher grey. | Confirmed |
 | `order` | int | 0 | Draw order (§9a). | Confirmed |
 | `editor` | object | | `{"name": "…"}`, `{"group": "…"}` — label and folder in the editor's part list. | Confirmed |
 
@@ -47,7 +51,7 @@ capped at size 150. `validate_pack.py` warns on each.
 | `controllable` | bool | false | Player can aim it (side-mounted Auto 3/5 behaviour, ref §4). Auto Smasher's top turret is `{"angle": π, "controllable": true}`, confirming the default is false and independent of mount style. With `range: 0` the player's aim applies only while fire is held; the turret otherwise sits at `angle` (serpent, 2026-09-26). **With a range** (a player-built pack, 2026-09-28: 72 tanks put legs, arms, hands, plumes and capes on `controllable` turrets with `arc` 0.26–0.7 and `range` 100 / 250 / 750 or unset, never 0) the turret tracks enemies inside the range while the player is idle and follows the cursor while firing: a "living limb" (recipes §27). **Confirmed** (Limb Lab, 2026-09-28: with nothing near and no click, the living-limb arm and the range-0 arm both sat still at rest; a shape within 250 turned the living-limb arm toward it while the range-0 arm ignored it; holding left click swung both to the cursor; two legs resting backward (165 degrees, arc 15, range unset) ignored a forward cursor, which is outside their wedge). A limb follows the cursor only while the cursor is inside its wedge (rest `angle` ± `arc`), so a limb resting backward never follows a forward cursor. | Confirmed |
 | `aboveBody` | bool | true | Drawn over the hull. Side turrets set false. The editor defaults it to true. | Confirmed (editor code) |
 | `baseSize` | number | 25 | **Radius of the turret's disc** (human packs 1–53: 10 for a joint that should read as a pivot, 30 for an eyeball, 1 to hide it). Verified in every export. | Confirmed (drawing) |
-| `color` | int | 1 (`#999999`) | Palette index of the disc (§10): 19 White for an eyeball, 27 for a joint in the owner's colour. | Confirmed (drawing) |
+| `color` | int \| string | 1 (`#999999`) | Palette index of the disc (§10), or a hex string since 2026-10-06: 19 White for an eyeball, 27 for a joint in the owner's colour. | Confirmed (drawing) |
 | `order` | int | 0 | Draw order (§9a). | Confirmed |
 | `editor` | object | | `{"name": "…"}`, `{"group": "…"}` | Confirmed |
 
@@ -93,6 +97,8 @@ within 0.3 units. All Confirmed unless marked.
 | Star polygon | 2 × `sides` vertices: vertex k at angle `angle + k·π/sides`, radius **0.4 × size** for even k (inner) and `size` for odd k, so the points sit at odd multiples of π/sides (no 45° rule for star squares). Same for a `star` hull, at 1.3 × size. |
 | Barrel | rectangle from x = `startDistance` to `startDistance + distance`, half-width 21 × `heightMultiplier` at the start and × `muzzleScale` at the end, shifted by `offset` in y, then rotated by `angle` about the hull centre. Default fill palette 1. Negative `startDistance`, widths 0.1–2.5 and tapers 0.04–7.5 all draw by the same formula. `invisible: true` barrels are not drawn at all. |
 | Barrel on a barrel (`mount`) | drawn in a frame at the **midpoint** of the base barrel's axis (`startDistance + distance/2` along its angle, at its offset), rotated by the base's angle; the mounted barrel's own `startDistance` counts from there. Drawn before (under) the base barrel, or after it when the mounted barrel has `flags.aboveBody`. Auto Trapper's tip: base 60 long, tip `startDistance` 30 → tip spans 60–80. A **shape** with `mount` uses the same frame (Ritual's triangle at `xOffset` 45 on a 70-long barrel lands 80 out). |
+| Part on a part (`mountPart`) | drawn in a frame at the carrier shape's **centre**, rotated by the carrier's angle, inside whatever frame the carrier itself sits in (the hull, a turret, a barrel's midpoint or another shape), four deep at most. The rider's own `order` and `aboveBody` place it in the sequence like any other part; `render_pack.py` draws it so (the editor's preview code, 2026-10-06: Confirmed (editor code), not yet checked against an SVG export). |
+| Fixed rotation | a `fixedRotation` shape draws at its `angle` in the **world**: the renderer subtracts the heading it draws the tank at, so a heading-up render shows the part turned 90° from an aim-relative one. |
 | Turret | frame at (`xOffset`, `yOffset`) rotated by `angle`; the barrels and shapes with `mountTurret` draw in that frame, those without `aboveBody` first, then the disc (radius `baseSize`, default 25, fill `color`, default palette 1), then the mounted parts flagged above. Within each group parts draw in ascending `order`; **ties draw shapes before barrels** (the opposite of the top-level rule; a player-built wizard's export, 2026-09-28). `aboveBody` (default true) draws the whole turret after the hull. |
 | Sequence | parts under the hull (barrels without `flags.aboveBody`, plain shapes, `aboveBody: false` turrets) in ascending `order`, ties in array order; then the hull; then `aboveBody` shapes, `flags.aboveBody` barrels and turrets in ascending `order`. Mounted parts draw inside their base's slot. |
 | Colour 27 | the exporter fills it with the hull's own `color` (or player blue), and play does the same: 27 is the hull's colour, the team's only when the hull is team-coloured (Confirmed 2026-09-30, §10); for team accents on a coloured figure, a team hull under a same-size cover shape. Parts **mounted on a turret** follow too: colour-27 eye dots on an auto-turret showed the team colour in play (gargoyle heads on a team hull under a cover, 2026-10-01). |
@@ -104,9 +110,10 @@ within 0.3 units. All Confirmed unless marked.
 42 body shapes showed as "32/32 parts" with everything after the 32nd missing in play, no error):
 per tank the editor keeps **32 body shapes, 32 barrels and 8 turrets**, per projectile **32
 parts, 32 barrels and 8 turrets**, and **16 projectiles**; anything past that is dropped on import
-without a word. A pack holds at most 512 tanks and 256 custom shapes. The human packs agree: their
+without a word. A pack holds at most 512 tanks, 256 custom shapes and 512 bosses (§1b). The human packs agree: their
 largest tanks sit at exactly 32 shapes and 32 barrels, and the most turrets seen is 8.
-`validate_pack.py` errors past each limit; `compose.save()` warns.
+`validate_pack.py` errors past each limit; `compose.save()` warns. **Hitboxes**: 8 collidable
+shapes per tank, 3 per projectile (2026-10-06; §8).
 
 **Total pieces, confirmed 2026-09-28**: the game refuses a tank with more than **96 pieces**, counting body shapes, barrels and turrets on the tank **plus** every projectile's `parts`, `barrels` (drawing-only rods, pop and fist sub-barrels) and `turrets`. The error reads "the tank has 97 pieces across its body and projectiles; a tank may have 96" (SpongeBob: 65 on the tank + 32 on projectiles). The previous build at exactly 96 imported, and a player-built pack's largest tanks sit at exactly 96. The editor checks the same count before loading ("has N pieces; a tank may have 96", §7a). So a figure drone, a drawn web or a decorated shot spends the same budget as the hull's art. The validator errors over 96.
 
