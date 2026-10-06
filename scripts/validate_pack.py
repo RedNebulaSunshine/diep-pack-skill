@@ -182,14 +182,11 @@ def is_hex_colour(c, alpha=True):
 
 def check_color(rep, where, obj, key="color"):
     """A palette index 0-27 or, since the editor update of 2026-10-06, a hex string #rrggbb / #rrggbbaa
-    (spec §10). 28 and 29 import but draw grey. Alpha is read by the editor; whether play honours it is
-    an open play question, so it is a warning until confirmed."""
+    (spec §10). 28 and 29 import but draw grey. An alpha byte draws the part translucent in play
+    (Confirmed 2026-10-06)."""
     if key in obj:
         c = obj[key]
         if is_hex_colour(c):
-            if len(c) == 9 and c[7:].lower() != "ff":
-                rep.warn(where, f"{key} {c} carries an alpha byte: the editor accepts it (spec §10), but whether the "
-                                "game draws a translucent part is not yet confirmed in play")
             return
         if c in TEAM_SLOTS:
             rep.warn(where, f"{key} {c} is the {TEAM_SLOTS[c]} team slot: in game it shows a team colour and follows "
@@ -1044,8 +1041,7 @@ def check_custom_shape(rep, sw, s):
     if c is not None and not is_hex_colour(c):
         rep.error(sw, f"custom shape color is a hex string like #FFE869 (not a palette index), got {c!r}; "
                       "the editor falls back to #ffe869 for anything else (2026-10-06)")
-    elif isinstance(c, str) and len(c) == 9 and c[7:].lower() != "ff":
-        rep.warn(sw, f"color {c} carries an alpha byte: accepted by the editor, translucency unconfirmed in play")
+
     if "ai" in s and check_keys(rep, sw + ".ai", s["ai"], CUSTOM_SHAPE_AI_KEYS):
         for k, v in s["ai"].items():
             if not is_num(v):
@@ -1320,9 +1316,12 @@ def validate(pack):
         if len(bosses) > MAX_BOSSES:
             rep.error("pack", f"{len(bosses)} bosses: the editor keeps only {MAX_BOSSES} and drops the rest")
         names, ids = {}, set()
+        by_tank = {}
         for bi, b in enumerate(bosses):
             bw = f"bosses[{bi}]" + (f" {b.get('name')!r}" if isinstance(b, dict) and isinstance(b.get("name"), str) else "")
             check_boss(rep, bw, b, set(pack_ids), tanks_by_id)
+            if isinstance(b, dict) and is_int(b.get("tank")) and b["tank"] in tanks_by_id:
+                by_tank.setdefault(b["tank"], []).append(b.get("name"))
             if isinstance(b, dict):
                 if is_int(b.get("id")) and b["id"] > 0:
                     if b["id"] in ids:
@@ -1336,6 +1335,11 @@ def validate(pack):
                     names.setdefault(key, b["name"])
                     if key in STOCK_BOSSES:
                         rep.warn("pack", f"boss {b['name']!r} shares its console name with the stock {STOCK_BOSSES[key]}")
+        for tid, nm in by_tank.items():
+            if len(nm) > 1:
+                rep.warn("pack", f"bosses {nm} all wrap tank {tid} {tanks_by_id[tid].get('name')!r}: the editor's export "
+                                 "renames every record after its tank, so they end up with one name and spawn_boss cannot "
+                                 "tell them apart (play 2026-10-06); give each its own tank copy")
     for t in tanks:
         if is_boss_tank(t) and not any(isinstance(b, dict) and b.get("tank") == t.get("id") for b in bosses):
             rep.warn(f"tanks '{t.get('name')}'", "editor.boss but no bosses[] record names this tank: it is out of the "

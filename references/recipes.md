@@ -795,6 +795,9 @@ lobby's clock while the pack is loaded; `stock_weights={"Guardian": 0, …}` kee
 `weight=0` spawns only by `spawn_boss <name>` (the name lower-cased without spaces). Bosses spawn
 on their own only where **Boss Auto-Spawn** is on (the sandbox admin panel); say so in the
 delivery. A boss from a **stock tank** needs no tank in the pack: `pack.boss("Octo Tank", size=4)`.
+**One tank per boss record**: the export renames each record after its tank, so two records on
+one tank share a name and `spawn_boss` cannot tell them apart (play 2026-10-06); a variant boss
+gets its own tank copy.
 
 **Open in play** (spec §13 item 22): the simple and bot brains with custom guns; `minDamageMultiplier`
 (4 on the stock records, 6 on Fallen Booster; a damage floor is the guess); whether a boss copy's
@@ -824,10 +827,10 @@ different spins); lanterns, bells or gondolas on a wheel; a halo of motes withou
 costs no budget); a chained tail of beads that spins as one piece (riders on riders, four deep);
 an eye whose pupil rides the eyeball and a brow that rides the eye. A rider's `aboveBody` and
 `order` place it in the draw sequence like any part. **A gun ring** (`gun_ring()`, the game's
-change notes' "rotating gun ring") is an open question: the editor's budget counts riding barrels
-as firing and the notes say they fire, but the editor's tooltip on such a barrel says "Looks only;
-it fires nothing"; `save()` notes it, the probe pack tests it. Spin rates: 0.03 per tick is a turn
-in about 8 s; 0.1 is brisk; a planet at 0.01 drifts.
+change notes' "rotating gun ring") works: barrels riding a spinning plate turn with it and fire
+(play 2026-10-06, with Always fire; the editor's tooltip on such a barrel, "Looks only; it fires
+nothing", is wrong). Spin rates: 0.03 per tick is a turn in about 8 s; 0.1 is brisk; a planet at
+0.01 drifts.
 
 **Fixed rotation** (`shape(fixed=True)`, spec §8) keeps a part's **angle** in the world while the
 tank turns ("like a dominator's base", the editor). Only the angle is fixed: a part off the centre
@@ -838,7 +841,7 @@ choice is one of With the aim / Fixed / Spins.
 
 ## 36. Exact colours: true-to-subject palettes, and opacity as an offer
 
-**Confirmed (editor code) 2026-10-06; opacity in play is untested.** Every `color` takes a hex string
+**Confirmed in play 2026-10-06, opacity included.** Every `color` takes a hex string
 `#rrggbb` or `#rrggbbaa` besides the palette (spec §10): `C.rgb(230, 120, 40)`, `C.rgba(255, 255,
 255, 0.35)`, `C.alpha(C.cyan, 0.5)`. The editor shows them as Custom color with Hex and Opacity.
 
@@ -853,9 +856,10 @@ choice is one of With the aim / Fixed / Spins.
   the hull's hex instead and misleads). So a hex-coloured figure gets team accents for free: paint
   the hull its exact colour, set the accents and highlights to 27, no cover shape needed. With no team
   assigned the 27 part draws see-through with a grey outline.
-- **Opacity** (a ghost, glass, smoke, a shadow, water): the editor stores and shows it; whether the
-  game draws a translucent part is unknown, so it is an **offer marked untested**, never a default,
-  and the recap says so. The validator warns on every alpha until it is confirmed.
+- **Opacity** (a ghost, glass, smoke, a shadow, water, a ghostly cape): the game draws the part
+  translucent, over the hull and over arena shapes (play 2026-10-06). It is still an **offer**, not a
+  default (the ask-before-embellishing rule): one line in the question. Keep alpha above about 0x40
+  (25 %) or only the outline reads; 0x80 is a clear ghost, 0xCC a tint.
 - The new swatch **Fallen** (17, `#C0C0C0`) is the stock Fallen bosses' grey: a "fallen" or
   undead tank line, armour, stone.
 

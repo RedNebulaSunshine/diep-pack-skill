@@ -18,8 +18,10 @@ strings anywhere a colour goes, and a custom arena shape's `color` must now be a
 was assigned; with no team assigned the square drew see-through with a grey outline). The editor's
 preview resolves 27 to the hull string, so it misleads here. This makes a hex hull the **simple way
 to team-tint a coloured figure**: paint the hull its exact colour and set the accents to 27, no cover
-shape needed. Still **not yet played** (§13 item 22): whether the game honours the alpha (a
-translucent part: a ghost, glass, a shadow). `validate_pack.py` accepts both forms and warns on alpha until confirmed;
+shape needed. **The alpha byte draws the part translucent** (Confirmed in play 2026-10-06: a half-opaque triangle
+over the hull and a 35 % white hexagon beside it both showed the hull, and arena shapes, through them).
+So a ghost, glass, smoke, water or a shadow is now a one-field effect; keep the alpha above about 0x40
+or the outline is all that reads. `validate_pack.py` accepts both forms;
 `compose.C.rgb()`, `C.rgba()` and `C.alpha(C.cyan, 0.5)` write them. Prefer the palette where a
 swatch is close: players read the stock colours (yellow food, pink crashers, grey barrels), and a
 palette hull keeps the team-colour recipe below simple.

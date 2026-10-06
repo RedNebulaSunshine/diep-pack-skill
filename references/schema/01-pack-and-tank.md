@@ -94,8 +94,8 @@ prints the figures; `validate_pack.shape_budget()` is the port.
 **Added by the editor update of 2026-10-06; Confirmed (editor code), with the game's own export of
 its six bosses as the worked example (`references/stock-bosses.diep-pack`: Decade, Guardian, Summoner,
 Defender, Fallen Booster, Fallen Overlord, each with its tank). First played 2026-10-06: custom bosses
-spawned on `spawn_boss <name>` and were, at every stat 7 and scale 2.5, far too strong to study; the
-brains and `minDamageMultiplier` are still open (§13 item 22).** This
+spawned on `spawn_boss <name>` and from the Bosses tab, and were, at every stat 7 and scale 2.5, far
+too strong to study; the brains and `minDamageMultiplier` are still open (§13 item 22).** This
 retires `arena.md`'s old rule that a pack cannot make a real boss: a pack now can.
 
 A boss is a **pack-level record that wraps a tank**. The tank is an ordinary tank of the pack (or a
@@ -129,7 +129,7 @@ game):
 | Key | Type | Meaning |
 |---|---|---|
 | `id` | int | 1–999999; **0 or absent = the editor assigns one**. Unique within the pack. |
-| `tank` | int | The tank it wraps: a custom id of this pack, or a stock id below 100000. The export drops a boss whose tank is missing and **overwrites the record's `name` with the tank's name** when the tank is in the pack, so name the tank. |
+| `tank` | int | The tank it wraps: a custom id of this pack, or a stock id below 100000. The export drops a boss whose tank is missing and **overwrites the record's `name` with the tank's name** when the tank is in the pack, so name the tank; **two records on one tank end up with one name** and `spawn_boss` cannot tell them apart (play 2026-10-06; the editor's Bosses tab shows them as "Name (#C…)"), so give each boss its own tank copy. |
 | `name` | string | [**"Boss"**] What the arena and the Bosses tab call it. The **console name** is this lower-cased with spaces removed (`spawn_boss probelord`, `set_boss <playerId> probelord`). |
 | `spawnMessage` | string | [**""** = the default announcement] What the arena announces when it spawns. |
 | `neutralTeam` | bool | [**true**] "On the shapes' team": counts as a shape, base defences leave it alone, and it and the shapes ignore each other. `false` makes a Fallen-style enemy tank that bases attack; **necromancer bosses need false** to raise arena shapes. |

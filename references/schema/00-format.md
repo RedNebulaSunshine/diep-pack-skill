@@ -119,13 +119,12 @@ writes `aboveBody: false`).
    carrier and draw under it unless `aboveBody` (§8); a **fixedRotation** part holds still while the
    tank turns (§8); all **eight collidable** parts collide (§8); a drone barrel's **projectile list**
    hatches a mix (§7); a projectile's own `color` beats `forcedBulletColor` (§7); `spawn_boss <name>`
-   spawns a custom boss (§1b). Still open: whether a hex colour's **alpha** draws a translucent part
-   (§10); whether a **barrel riding a part** fires (§8: the editor's import budget counts it and the
-   game's change notes say "a rotating gun ring", but the editor's own tooltip on such a barrel reads
-   "Looks only; it fires nothing"); the **simple** and **bot** brains with custom guns; a boss from a
-   **stock tank** at scale 4; the rotation sentence after loading; what `minDamageMultiplier` changes
-   (a boss copy with it at 1 and at 6) and what `ai.directionChangeSpeed` does. Probe 0.2.0 (harmless
-   bosses) carries the rest.
+   spawns a custom boss (§1b); probe 0.2.0 added that a hex colour's **alpha draws translucent** in
+   play, over the hull and over arena shapes (§10), and that a **barrel riding a part turns with it
+   and fires** (§7, §8; the editor's tooltip "Looks only; it fires nothing" is wrong). Still open: the
+   **simple** and **bot** brains with custom guns; a boss from a **stock tank** at scale 4; the
+   rotation sentence after loading; what `minDamageMultiplier` changes (probe 0.3.0: three identical
+   one-gun boss tanks at 1 / absent / 6) and what `ai.directionChangeSpeed` does.
 
 Resolved: Q1–9, Q11–19, Q21–26 of the original list, plus `preSpawn`, `burst`,
 `firesOnDeath`, `numBullets`, range-valued multipliers and `droneControllable` found along

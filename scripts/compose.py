@@ -30,7 +30,7 @@ Conventions (all confirmed in references/schema/ unless marked GUESS):
     carrier and everything on it orbits (moons, a gun ring); a riding shape has no hitbox
   * shape(fixed=True) keeps the part's angle in the world while the tank turns (a dominator's
     base, a compass needle); colours are palette indices (C.<name>) or hex strings "#rrggbb" /
-    "#rrggbbaa" (C.rgb(), C.rgba(), C.alpha()); alpha is unconfirmed in play
+    "#rrggbbaa" (C.rgb(), C.rgba(), C.alpha()); alpha draws translucent in play
   * a boss is a pack-level record wrapping a tank: Pack.boss(tank, ...) with the editor's own
     words (brain, behaviour, idle, size, health, xp, ring, weight); Design(..., boss=True) or
     Pack.boss(..., boss_only=True) marks the tank boss-only (out of the tree, stats fixed at 7)
@@ -141,8 +141,8 @@ class C:
 
     @staticmethod
     def rgba(r, g, b, a=1.0):
-        """An exact colour with opacity, "#rrggbbaa"; `a` is 0-1 (the editor's Opacity slider).
-        Whether play draws the part translucent is not yet confirmed; save() warns."""
+        """An exact colour with opacity, "#rrggbbaa"; `a` is 0-1 (the editor's Opacity slider). The part
+        draws translucent in play, over the hull and over arena shapes (Confirmed 2026-10-06)."""
         return C.rgb(r, g, b) + "%02x" % max(0, min(255, int(round(a * 255))))
 
     @staticmethod
@@ -326,8 +326,6 @@ class Tank(_mechanics()):
         "#rrggbb" / "#rrggbbaa" (lower-cased, as the editor stores it; spec §10, 2026-10-06)."""
         if isinstance(c, str):
             if HEX_RE.match(c):
-                if len(c) == 9 and c[7:].lower() != "ff":
-                    self.warn(f"colour {c} carries opacity: the editor accepts it, play is unconfirmed (spec §10)")
                 return c.lower()
             if c not in C.NAMES:
                 raise ValueError(f"unknown colour {c!r}; use C.<name>, an index 0-29 or a hex string #rrggbb")
@@ -800,15 +798,11 @@ class Tank(_mechanics()):
         above=True draws it over the hull (flags.aboveBody); invisible=True fires without
         being drawn; auto_fire=True fires without the player clicking (flags.forceFire).
         ride=<shape> mounts it on a body shape (angle, gap and offset from the carrier's centre,
-        along it): a gun ring on a spinning plate. Whether such a gun fires is a play question
-        (the editor's budget counts it and the game's notes say it fires; its tooltip says it
-        does not), so save() notes it."""
+        along it): a gun ring on a spinning plate, which turns with the plate and fires
+        (Confirmed in play 2026-10-06; the editor's tooltip saying it "fires nothing" is wrong)."""
         ride = self._shape_index(ride)
         if ride is not None:
             fields["mountPart"] = ride
-            if bullet_type != "none" and not (isinstance(projectile, int) and projectile < 0):
-                self.warn(f"weapon {name or ''} rides a body shape: the editor's tooltip says a riding barrel "
-                          "fires nothing, its budget and the game's notes say it fires; check in play (spec §8)")
         if bullet_type is None:
             idx = projectile if isinstance(projectile, int) else projectile[0]
             bullet_type = self.projectiles[idx]["base"] if 0 <= idx < len(self.projectiles) else "bullet"

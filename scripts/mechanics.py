@@ -1191,11 +1191,10 @@ class Mechanics:
     def gun_ring(self, carrier, n=4, radius=40, length=60, width=BARREL_WIDTH * 0.7, projectile=None, start=0,
                  spin=0.02, damage=0.4, reload=1.5, name="ring gun", **over):
         """`n` guns riding a spinning plate (`carrier`, a shape dict), pointing outward from its centre at
-        `radius`: the game's change notes call it "a rotating gun ring". The plate gets `spin` unless it
-        spins already. Whether a gun riding a part fires is a PLAY QUESTION as of 2026-10-06: the editor's
-        import budget counts it and the game's notes say it fires, but the editor's tooltip on such a barrel
-        reads "Looks only; it fires nothing"; save() notes it. Give the guns forceFire (auto_fire=True) if
-        the ring should spray on its own. Returns the barrels."""
+        `radius`: the game's change notes' "rotating gun ring". The plate gets `spin` unless it spins
+        already. The guns turn with the plate and fire (Confirmed in play 2026-10-06, with auto_fire; the
+        editor's tooltip "Looks only; it fires nothing" on such a barrel is wrong). Give the guns forceFire
+        (auto_fire=True) if the ring should spray on its own. Returns the barrels."""
         p = self.bullet() if projectile is None else projectile
         if spin and not carrier.get("spinSpeed"):
             carrier["spinSpeed"] = spin

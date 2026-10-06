@@ -16,10 +16,9 @@ change.
   editor's own words, `Design(boss=True)` / `Tank.boss_tank()` for a boss-only copy, `boss_rotation()`,
   `hide_stock_bosses`, `hidden_bosses`; spec §1b, recipes §34; `render_pack.py --boss` draws a boss at
   its scale beside a level-1 tank); **exact colours** (`"#rrggbb"` / `"#rrggbbaa"` on every colour
-  field, `C.rgb()`, `C.rgba()`, `C.alpha()`, the new **Fallen** swatch 17; opacity accepted and
-  warned about until played; spec §10, recipes §36); **parts that ride parts** (`shape(ride=…)`,
+  field, `C.rgb()`, `C.rgba()`, `C.alpha()`, the new **Fallen** swatch 17; spec §10, recipes §36); **parts that ride parts** (`shape(ride=…)`,
   `rod(ride=…)`, `weapon(ride=…)`, `orbit()` for moons and wheels, `gun_ring()` for guns on a
-  spinning plate, whose firing is an open question; chains four deep, riders have no hitbox; spec
+  spinning plate; chains four deep, riders have no hitbox and draw under the carrier; spec
   §8, recipes §35); **fixed rotation** (`shape(fixed=True)`, `base()`, `compass()`); **eight
   collidable parts** per tank (three before; still three per projectile); the lobby's new **shape
   spawn budget** (room 5, crowding 2 per ring; errors in the lobby's words, printed by `save()`;

@@ -31,7 +31,7 @@ clamped (numbers) or dropped (lists), silently; the validator warns.
   that points nowhere or nests more than four deep, and gives a projectile's
   barrel that fires a decorated or armed projectile a plain shot instead.
 - **Colours** (§10) are palette indices 0–27 or, since the editor update of 2026-10-06, exact hex
-  strings `"#rrggbb"` / `"#rrggbbaa"` on every `color` field (alpha unconfirmed in play). The lobby
+  strings `"#rrggbb"` / `"#rrggbbaa"` on every `color` field (the alpha draws translucent, play). The lobby
   also refuses a pack whose spawning shapes pass the **shape budget** (§1a).
 - **Editor labels** since 2026-10-06: custom tanks read **#C1, #C2 …** in pack order (#C1 = id
   100001) and the console takes `set_class c1`; use those labels in recaps and test instructions.
@@ -155,7 +155,7 @@ too much room"), and per shape 2000 × share × π × size² ÷ (22300² × max(
 | `mount` | int | | rides `barrels[i]` of the same array, measured from that barrel's midpoint (launcher tips) | H |
 | `invisible` | bool | false | not drawn, still fires: hidden bite points, trail droppers | C |
 | `color` | int \| hex | 1 (Cannon grey) | palette index or hex string; 27 = the body's colour (missile barrels) | C |
-| `mountPart` | int | | rides body shape i (its angle, gap and offset from that shape's centre, along it); a gun ring on a spinning plate; **whether it fires is open** (the editor's budget counts it, its tooltip says "fires nothing") | C (editor code) |
+| `mountPart` | int | | rides body shape i (its angle, gap and offset from that shape's centre, along it); a gun ring on a spinning plate turns with it and fires (play; the editor's tooltip saying otherwise is wrong) | C |
 | `forcedBulletColor` | int \| hex | | game-only (the stock bosses' drones), with `flags.forceBulletColor`; the projectile's own `color` wins over it (play), so a pack of your own has no use for it | H |
 | `order` | int | 0 | draw order shared with shapes and turrets; -1 sits under the main barrel | C |
 | `editor` | object | | `{"name": "…"}` (name every part), `{"group": "…"}` folder | C |
@@ -231,7 +231,7 @@ and turrets. Hull polygons draw at 1.3 × size, squares axis-aligned. Outline = 
 3–6 follow the player's team once they have been on that team; for a colour that must stay
 put use Salmon or Crimson (reds), Blue or Indigo, Mint or Forest, Plum. 3, 12, 15, 28, 29
 are unnamed greys. **Exact colours**: any `color` may be `"#rrggbb"` or `"#rrggbbaa"` (the
-editor's Custom color with Opacity; alpha in play unconfirmed); `C.rgb()`, `C.rgba()`, `C.alpha()`.
+editor's Custom color with Opacity; translucent in play); `C.rgb()`, `C.rgba()`, `C.alpha()`.
 
 ## Vanilla ids (§11): the full table with levels and parents is `vanilla-tanks.md`
 

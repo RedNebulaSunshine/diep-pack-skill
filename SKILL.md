@@ -179,14 +179,15 @@ Then turn the description and the moves into a design sheet before writing JSON:
   map spawns" are boss requests, not boss-shape requests any more.
 - **Parts that ride parts and parts that hold still** (spec §8, recipes §35): `shape(ride=plate)`
   puts a part on another part, so a spinning carrier swings it round (`orbit()` for moons, a
-  wheel, a clock; `gun_ring()` for guns on a spinning plate, whose firing is a play question);
+  wheel, a clock; `gun_ring()` for guns on a spinning plate, which turn with it and fire);
   chains nest four deep and riders have no hitbox. `shape(fixed=True)` keeps a part's angle in
   the world (`base()` for a dominator base, `compass()` for a needle). Eight collidable parts per
   tank now, three per projectile.
 - **Colour**: the palette by default (players read the stock colours); exact hex colours when the
   subject needs them (recipes §36), `C.rgb()`, `C.rgba()`, `C.alpha()`. On a hex-coloured hull,
   parts at 27 show the team colour (play), so a hex hull with 27 accents is the simplest team
-  recipe for a coloured figure. Opacity is unconfirmed in play, so it is an offer, never a default.
+  recipe for a coloured figure. Opacity draws translucent in play; like any flourish it is an
+  offer in the one question, never a default.
 - Balance: scale `damageMultiplier` down as barrel count goes up, like the stock ring tanks.
 - **Motion is a question, not a default.** Almost any part can move, and players love it:
   the motion map in `figurative.md` §5 lists what moves (pistons with `animate` and
@@ -268,7 +269,7 @@ host's structured-question tool if it has one; otherwise plain text):
   boss copy of a playable tank is an offer at the end of a figurative build, not a default.
 - **Exact colours or the palette?** only when the subject has a colour the palette lacks (a
   brand, a flag, a real animal's coat): one line offering the exact colours, Recommended where it
-  matters, with the palette as the alternative. Opacity (a ghost, glass) is offered as untested.
+  matters, with the palette as the alternative. Opacity (a ghost, glass) is offered the same way.
 - **Level**: 15 / 30 / 45 / 60 (or a number the user gave).
 - **Parent tank(s)** by name, from `vanilla-tanks.md`; multiple parents allowed.
 - **Author name**: the name the editor shows on the pack. Remember it for the rest of the
