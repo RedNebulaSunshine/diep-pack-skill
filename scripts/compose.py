@@ -83,7 +83,9 @@ SHAPE_SIZE = 25       # a shape without `size` draws at 25
 
 
 class C:
-    """Palette indices (spec section 10). The lower-case names are the editor's own swatch
+    """Palette indices (spec section 10), or hex strings through rgb()/rgba()/alpha(). On a hull
+    painted a hex colour, parts at 27 show the TEAM colour (Confirmed in play 2026-10-06), so a hex
+    hull is the simple way to team-tint a coloured figure. The lower-case names are the editor's own swatch
     names (what the tester sees in the per-part colour picker), so recaps can use them. Indices
     3-6 are the game's TEAM slots, which the picker calls Red, Purple and Green: in play they
     show a team colour and, once the player has been on that team, follow the player's current
@@ -374,9 +376,11 @@ class Tank(_mechanics()):
         (coordinates from the barrel's midpoint, along its axis). ride=<shape> (the dict another
         shape() returned, or its index) mounts it on that body shape: coordinates from the
         carrier's centre along its angle, so a spinning carrier swings it round (moons, a gun
-        ring); chains nest 4 deep; a riding shape is looks only, its collidable flag is cleared
-        on import (spec §8, 2026-10-06). fixed=True keeps its angle in the world instead of
-        turning with the aim, like a dominator's base (its position still turns with the tank).
+        ring; Confirmed in play 2026-10-06); a rider draws UNDER its carrier unless above=True
+        (play: moons vanished under their plate), chains nest 4 deep, and a riding shape is looks
+        only, its collidable flag cleared on import (spec §8). fixed=True keeps its angle in the
+        world instead of turning with the aim, like a dominator's base (Confirmed in play; its
+        position still turns with the tank).
         stays_visible=True keeps it drawn while the tank is faded."""
         s = {"sides": int(sides), "size": size}
         ride = self._shape_index(ride)

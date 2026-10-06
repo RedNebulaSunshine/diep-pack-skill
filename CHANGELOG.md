@@ -8,8 +8,10 @@ change.
 ## 1.8.0 (2026-10-06)
 
 - The editor update of 2026-10-06, read from the editor's own code and the game's export of its
-  six bosses, nothing played yet (the open play questions are spec §13 item 22; the lab's probe
-  pack tests each): **custom bosses** (a pack-level record wrapping a tank: `Pack.boss(tank,
+  six bosses, and played once the same day (confirmed: riders orbit and draw under their carrier,
+  fixed parts hold still, eight hitboxes collide, a projectile list hatches a mix, 27 parts on a
+  hex hull show the team colour, `spawn_boss` spawns a custom boss; still open: opacity, whether a
+  riding barrel fires, the boss brains; spec §13 item 22): **custom bosses** (a pack-level record wrapping a tank: `Pack.boss(tank,
   brain=, behaviour=, idle=, size=, health=, xp=, ring=, weight=, message=, neutral=)` in the
   editor's own words, `Design(boss=True)` / `Tank.boss_tank()` for a boss-only copy, `boss_rotation()`,
   `hide_stock_bosses`, `hidden_bosses`; spec §1b, recipes §34; `render_pack.py --boss` draws a boss at

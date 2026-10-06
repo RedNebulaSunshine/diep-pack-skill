@@ -13,10 +13,13 @@ shapes, 1 for barrels and turrets). The picker gained **Custom color**, **Edit c
 box and an **Opacity** slider (the `aa` pair), and remembers the last 22 custom colours per browser
 (local storage, not in the pack). Exports write the value as stored, so a pack may carry hex
 strings anywhere a colour goes, and a custom arena shape's `color` must now be a *valid* hex string
-(else `#ffe869`). Two things are **not yet played** (§13 item 22): whether the game honours the
-alpha (a translucent part: a ghost, glass, a shadow), and what a 27 part shows on a hull painted a
-hex colour (the editor's preview resolves 27 to the hull's string, as it does for a palette hull;
-expect the same in play). `validate_pack.py` accepts both forms and warns on alpha until confirmed;
+(else `#ffe869`). **A 27 part on a hex-coloured hull shows the team colour**, not the hull's hex (Confirmed in play
+2026-10-06: an orange hex hull with a 27 square showed a blue, red or other team square once a team
+was assigned; with no team assigned the square drew see-through with a grey outline). The editor's
+preview resolves 27 to the hull string, so it misleads here. This makes a hex hull the **simple way
+to team-tint a coloured figure**: paint the hull its exact colour and set the accents to 27, no cover
+shape needed. Still **not yet played** (§13 item 22): whether the game honours the alpha (a
+translucent part: a ghost, glass, a shadow). `validate_pack.py` accepts both forms and warns on alpha until confirmed;
 `compose.C.rgb()`, `C.rgba()` and `C.alpha(C.cyan, 0.5)` write them. Prefer the palette where a
 swatch is close: players read the stock colours (yellow food, pink crashers, grey barrels), and a
 palette hull keeps the team-colour recipe below simple.

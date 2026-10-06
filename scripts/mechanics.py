@@ -1174,12 +1174,13 @@ class Mechanics:
         round a nucleus, lanterns on a wheel, a clock's hands (n=2 with different radii). The carrier is
         given `spin` (per tick; 0.03 is one turn in about 8 s) unless it already spins or spin=0; make the
         carrier the planet itself, or a hidden disc (size 1, no colour) at the centre of the orbit. Riders
-        are looks only (no hitbox, spec §8); `above` defaults to the carrier's own layer. Returns the list.
-        Confirmed in the editor's code; the orbit in play is a Phase-3 test (2026-10-06)."""
+        are looks only (no hitbox, spec §8) and draw UNDER the carrier unless above=True, so `above`
+        defaults to True (play 2026-10-06: moons under their plate were barely visible). Returns the list.
+        Orbiting Confirmed in play 2026-10-06."""
         if spin and not carrier.get("spinSpeed"):
             carrier["spinSpeed"] = spin
         if above is None:
-            above = bool(carrier.get("aboveBody"))
+            above = True
         out = []
         for i in range(n):
             ang = start + 360 * i / n

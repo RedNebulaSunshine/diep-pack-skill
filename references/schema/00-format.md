@@ -113,18 +113,19 @@ writes `aboveBody: false`).
 ## 13. Remaining open questions
 
 22. *(found 2026-10-06, the editor update; read from the editor's code and the game's own export of
-   its bosses; nothing played yet)* **The editor update of 2026-10-06**, open play questions in the
-   order a probe pack answers them: whether a hex colour's **alpha** draws a translucent part (§10);
-   what colour **27 parts** take on a hull painted a hex colour (§10: the hull's colour, as with a
-   palette hull, is the expectation); whether a **barrel riding a part** fires (§8: the editor's
-   import budget counts it and the game's change notes say "a rotating gun ring", but the editor's
-   own tooltip on such a barrel reads "Looks only; it fires nothing"); that **riding parts orbit** when
-   the carrier spins; that a **fixedRotation** part keeps its heading while the tank turns; that all
-   **eight collidable** parts collide; `spawn_boss` with a custom boss's name; the **simple** and
-   **bot** brains with custom guns; a boss from a **stock tank** at scale 4; the rotation sentence after
-   loading; a drone barrel with a **projectile list** hatching a mix; `forcedBulletColor` against a
-   projectile's own `color`; what `minDamageMultiplier` changes (shoot a boss copy with it at 1 and at
-   6) and what `ai.directionChangeSpeed` does. The lab's `editor-update-probe` pack carries one case of each.
+   its bosses; first probe played the same day)* **The editor update of 2026-10-06.** Resolved in play
+   (the lab's Editor Update Probe 0.1.0): **27 parts on a hex hull show the team colour**, see-through
+   with a grey outline while no team is assigned (§10); **riding parts orbit** with their spinning
+   carrier and draw under it unless `aboveBody` (§8); a **fixedRotation** part holds still while the
+   tank turns (§8); all **eight collidable** parts collide (§8); a drone barrel's **projectile list**
+   hatches a mix (§7); a projectile's own `color` beats `forcedBulletColor` (§7); `spawn_boss <name>`
+   spawns a custom boss (§1b). Still open: whether a hex colour's **alpha** draws a translucent part
+   (§10); whether a **barrel riding a part** fires (§8: the editor's import budget counts it and the
+   game's change notes say "a rotating gun ring", but the editor's own tooltip on such a barrel reads
+   "Looks only; it fires nothing"); the **simple** and **bot** brains with custom guns; a boss from a
+   **stock tank** at scale 4; the rotation sentence after loading; what `minDamageMultiplier` changes
+   (a boss copy with it at 1 and at 6) and what `ai.directionChangeSpeed` does. Probe 0.2.0 (harmless
+   bosses) carries the rest.
 
 Resolved: Q1–9, Q11–19, Q21–26 of the original list, plus `preSpawn`, `burst`,
 `firesOnDeath`, `numBullets`, range-valued multipliers and `droneControllable` found along

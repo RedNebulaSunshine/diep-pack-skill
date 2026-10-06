@@ -183,9 +183,10 @@ Then turn the description and the moves into a design sheet before writing JSON:
   chains nest four deep and riders have no hitbox. `shape(fixed=True)` keeps a part's angle in
   the world (`base()` for a dominator base, `compass()` for a needle). Eight collidable parts per
   tank now, three per projectile.
-- **Colour**: the palette by default (players read the stock colours and the team recipe stays
-  simple); exact hex colours when the subject needs them (recipes §36), `C.rgb()`, `C.rgba()`,
-  `C.alpha()`; opacity is unconfirmed in play, so it is an offer, never a default.
+- **Colour**: the palette by default (players read the stock colours); exact hex colours when the
+  subject needs them (recipes §36), `C.rgb()`, `C.rgba()`, `C.alpha()`. On a hex-coloured hull,
+  parts at 27 show the team colour (play), so a hex hull with 27 accents is the simplest team
+  recipe for a coloured figure. Opacity is unconfirmed in play, so it is an offer, never a default.
 - Balance: scale `damageMultiplier` down as barrel count goes up, like the stock ring tanks.
 - **Motion is a question, not a default.** Almost any part can move, and players love it:
   the motion map in `figurative.md` §5 lists what moves (pistons with `animate` and

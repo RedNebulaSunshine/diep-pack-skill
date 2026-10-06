@@ -90,7 +90,7 @@ too much room"), and per shape 2000 × share × π × size² ÷ (22300² × max(
 | `body.star` | bool | false | alternating inner (0.4) and outer vertices | C |
 | `body.angle` | number | 0 | fixed rotation; official octagons π/8 | C |
 | `body.size` | number | 50 | hull radius; 44.23 octagon matches a 50 circle; 5–8 hides the hull behind parts (hitbox shrinks with it); ≤ 67 | C |
-| `body.color` | int \| hex | 27 team | palette index or hex string (§10). Parts at 27 ("same color as the body") take the hull's colour (C): for team accents on a coloured figure leave the hull team-coloured and cover it with a same-size `aboveBody` shape (§10); shots with no `color` are team-coloured | C |
+| `body.color` | int \| hex | 27 team | palette index or hex string (§10). Parts at 27 ("same color as the body") take a palette hull's colour, but on a **hex hull they show the team colour** (C, play 2026-10-06): the simple way to team-tint a coloured figure. On a palette hull, team accents need a team hull under a same-size `aboveBody` cover (§10); shots with no `color` are team-coloured | C |
 | `body.spinSpeed` | number | 0 | radians per tick (0.0628 = one turn per 4 s); −0.5–0.5 | C |
 | `invisibility.enabled` | bool | false | tank fades | C |
 | `.gain` | number | 2/65 | the editor's "Time to vanish": gain = 1 ÷ (25 × seconds), 0.1–60 s (default 1.3 s; Landmine 10 s) | C |
@@ -156,7 +156,7 @@ too much room"), and per shape 2000 × share × π × size² ÷ (22300² × max(
 | `invisible` | bool | false | not drawn, still fires: hidden bite points, trail droppers | C |
 | `color` | int \| hex | 1 (Cannon grey) | palette index or hex string; 27 = the body's colour (missile barrels) | C |
 | `mountPart` | int | | rides body shape i (its angle, gap and offset from that shape's centre, along it); a gun ring on a spinning plate; **whether it fires is open** (the editor's budget counts it, its tooltip says "fires nothing") | C (editor code) |
-| `forcedBulletColor` | int \| hex | | game-only (the stock bosses' drones), with `flags.forceBulletColor`: the shot takes this colour; kept raw by the editor | H |
+| `forcedBulletColor` | int \| hex | | game-only (the stock bosses' drones), with `flags.forceBulletColor`; the projectile's own `color` wins over it (play), so a pack of your own has no use for it | H |
 | `order` | int | 0 | draw order shared with shapes and turrets; -1 sits under the main barrel | C |
 | `editor` | object | | `{"name": "…"}` (name every part), `{"group": "…"}` folder | C |
 
@@ -182,12 +182,12 @@ theirs. Put complex projectiles on a **Reload cap of 0**, as a player-built pack
 | `angle` | number | 0 | rotation | C |
 | `spinSpeed` | number | 0 | per tick (Smasher 0.1, Spike 0.17) | C |
 | `star` | bool | false | 2 × sides vertices, inner radius 0.4 × size | C |
-| `collidable` | bool | false | the part has its own hitbox, contact at roughly half to two thirds of its drawn radius; **only the first eight per tank** (three before 2026-10-06), three per projectile; never on a part that rides a part | C |
+| `collidable` | bool | false | the part has its own hitbox, contact at roughly half to two thirds of its drawn radius; **only the first eight per tank** (three before 2026-10-06; all eight collide, play), three per projectile; never on a part that rides a part | C |
 | `aboveBody` | bool | false | draw over the hull (or over its turret's disc) | C |
 | `mountTurret` | int | | rides a turret, offsets in the turret's frame | C |
 | `mount` | int | | rides a barrel, from its midpoint | H |
-| `mountPart` | int | | **rides another body shape** (2026-10-06): offsets from the carrier's centre along its angle, so a spinning carrier swings it round (moons, a wheel, a chained tail); chains nest 4 deep; `mount` and `mountTurret` win over it; a riding shape has no hitbox | C (editor code) |
-| `fixedRotation` | bool | false | keeps its **angle** in the world while the tank turns (a dominator's base, a compass needle); the position still turns with the aim, so centre it. The editor's Rotation choice: With the aim / Fixed / Spins | C (editor code) |
+| `mountPart` | int | | **rides another body shape** (2026-10-06): offsets from the carrier's centre along its angle, so a spinning carrier swings it round (moons, a wheel, a chained tail); draws **under** the carrier unless `aboveBody`; chains nest 4 deep; `mount` and `mountTurret` win over it; a riding shape has no hitbox | C |
+| `fixedRotation` | bool | false | keeps its **angle** in the world while the tank turns (a dominator's base, a compass needle); the position still turns with the aim, so centre it. The editor's Rotation choice: With the aim / Fixed / Spins | C |
 | `staysVisible` | bool | false | stays drawn while the tank is faded (eyes on a stalker) | C |
 | `color` | int \| hex | 0 (Border grey) | palette index or hex string | C |
 | `order`, `editor` | | | as barrels | C |

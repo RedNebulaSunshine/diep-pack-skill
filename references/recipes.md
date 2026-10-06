@@ -803,11 +803,13 @@ targets, cursor pivots to rest).
 
 ## 35. Parts that ride parts: moons, a wheel, a gun ring, a chained tail
 
-**Confirmed (editor code) 2026-10-06; orbiting in play is a Phase-3 test.** `shape(ride=carrier)`
+**Confirmed in play 2026-10-06 (the orbit); the rest from the editor's code.** `shape(ride=carrier)`
 puts a part on another part (`mountPart`, spec §8): its offsets are measured from the carrier's
-centre along the carrier's angle, so a spinning carrier swings everything on it round. Chains nest
-four deep (a root part and four riders); a rider is **looks only** (its hitbox is cleared on
-import), so put `collidable` on the carrier. Barrels ride parts too (`rod(ride=…)`, `weapon(ride=…)`).
+centre along the carrier's angle, so a spinning carrier swings everything on it round. A rider draws
+**under** its carrier unless `above=True` (the first moons were barely visible beneath their plate;
+`orbit()` defaults to above). Chains nest four deep (a root part and four riders); a rider is **looks
+only** (its hitbox is cleared on import), so put `collidable` on the carrier. Barrels ride parts too
+(`rod(ride=…)`, `weapon(ride=…)`).
 
 ```python
 planet = d.shape(0, 40, at=(-70, 0), color=C.indigo, name="planet")
@@ -847,9 +849,10 @@ choice is one of With the aim / Fixed / Spins.
   brand or a flag, a real animal's coat, a film character's suit, a themed arena whose shapes
   already use hex. Keep the set small (two or three exact colours plus the palette) and offer it in
   the one question ("exact colours or the palette?") when the subject does not settle it.
-- **27 on a hex hull**: parts at 27 take the hull's colour, as with a palette hull (the editor's
-  preview does so; play expected to match, Phase 3). Team accents on a hex-coloured figure keep the
-  recipe of spec §10: team hull, same-size cover in the exact colour, 27 details.
+- **27 on a hex hull shows the team colour** (Confirmed in play 2026-10-06; the editor's preview shows
+  the hull's hex instead and misleads). So a hex-coloured figure gets team accents for free: paint
+  the hull its exact colour, set the accents and highlights to 27, no cover shape needed. With no team
+  assigned the 27 part draws see-through with a grey outline.
 - **Opacity** (a ghost, glass, smoke, a shadow, water): the editor stores and shows it; whether the
   game draws a translucent part is unknown, so it is an **offer marked untested**, never a default,
   and the recap says so. The validator warns on every alpha until it is confirmed.
@@ -868,6 +871,7 @@ things at different times.
 
 Decade's and the Fallen bosses' barrels also carry `forcedBulletColor` with `flags.forceBulletColor`
 (spec §7): the shot takes that colour whoever fires it, which is how each stock boss's drones wear
-the boss's colour even when the record is on another team. The editor keeps the pair raw (no form);
-a projectile's own `color` is the usual way to colour a shot, and which wins when both are set is a
-Phase-3 question. Summoner's barrels carry `droneSides: 4` the same way; prefer the projectile's `sides`.
+the boss's colour even when the record is on another team. The editor keeps the pair raw (no form),
+and **a projectile's own `color` wins over it** (play 2026-10-06), so a pack of your own colours its shots
+through the projectile as always. Summoner's barrels carry `droneSides: 4` the same way; prefer the
+projectile's `sides`.

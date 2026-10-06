@@ -93,7 +93,9 @@ prints the figures; `validate_pack.shape_budget()` is the port.
 
 **Added by the editor update of 2026-10-06; Confirmed (editor code), with the game's own export of
 its six bosses as the worked example (`references/stock-bosses.diep-pack`: Decade, Guardian, Summoner,
-Defender, Fallen Booster, Fallen Overlord, each with its tank). Nothing played yet (§13 item 22).** This
+Defender, Fallen Booster, Fallen Overlord, each with its tank). First played 2026-10-06: custom bosses
+spawned on `spawn_boss <name>` and were, at every stat 7 and scale 2.5, far too strong to study; the
+brains and `minDamageMultiplier` are still open (§13 item 22).** This
 retires `arena.md`'s old rule that a pack cannot make a real boss: a pack now can.
 
 A boss is a **pack-level record that wraps a tank**. The tank is an ordinary tank of the pack (or a

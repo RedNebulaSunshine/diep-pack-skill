@@ -175,7 +175,9 @@ def tank_ops(tank, exporter_quirks=False, aim=0.0):
       * colour 27 is "same color as the body": the hull's own `color` when it has one (a palette
         index or a hex string), else the team colour (player blue here); the exporter does the same
       * a part or barrel with `mountPart: i` draws in body shape i's frame (its centre, rotated by
-        its angle), chains included; a riding shape has no hitbox, so it is drawn like any other
+        its angle), chains included, inside the carrier's own slot: before the carrier, or after it
+        when the rider is flagged aboveBody (play, 2026-10-06: moons under their plate), the same
+        rule as a part on a barrel
       * a shape with `fixedRotation` keeps its angle in the world: here, angle minus `aim`
       * a hex `color` may carry alpha; the op's colour is then rgba and the PNG blends it
     """
@@ -272,25 +274,49 @@ def tank_ops(tank, exporter_quirks=False, aim=0.0):
             if above_disc:
                 emit_barrel(j, frame, seen) if kind == "barrel" else emit_shape(shapes[j], frame)
 
+    def riders_of(i):
+        """(order, kind, index) of the parts and barrels riding body shape i, in draw order."""
+        items = [(int(b.get("order", 0)), 0, j, "barrel") for j, b in enumerate(barrels) if rides_part(b) == i]
+        items += [(int(s.get("order", 0)), 1, j, "shape") for j, s in enumerate(shapes) if rides_part(s) == i]
+        return sorted(items)
+
     def emit_shape(s, parent=None):
         parent = riding_frame(s, parent or Frame())
         frame = parent.child((float(s.get("xOffset", 0)), float(s.get("yOffset", 0))), shape_angle(s))
+        i = next((k for k, q in enumerate(shapes) if q is s), -1)
+        riders = riders_of(i) if i >= 0 else []
+
+        def is_above(j, kind):
+            return barrel_above(barrels[j]) if kind == "barrel" else bool(shapes[j].get("aboveBody"))
+
+        def emit_rider(j, kind):
+            if kind == "barrel":
+                emit_barrel(j, Frame(), set())
+            else:
+                emit_shape(shapes[j])
+
+        for _, _, j, kind in riders:
+            if not is_above(j, kind):
+                emit_rider(j, kind)
         sides = int(s.get("sides", 0))
         size = float(s.get("size", SHAPE_SIZE))
         if sides <= 2:
             ops.append(("circle", frame.origin, size, colour(s, 0)))
-            return
-        pts = regular_polygon(sides, size, 0.0, bool(s.get("star")))
-        ops.append(("poly", [frame.apply(p) for p in pts], colour(s, 0)))
+        else:
+            pts = regular_polygon(sides, size, 0.0, bool(s.get("star")))
+            ops.append(("poly", [frame.apply(p) for p in pts], colour(s, 0)))
+        for _, _, j, kind in riders:
+            if is_above(j, kind):
+                emit_rider(j, kind)
 
     # 1. parts under the hull, in `order` (ties keep array order: barrels, shapes, turrets)
     under, above = [], []
     for i, b in enumerate(barrels):
-        if "mountTurret" in b or "mount" in b:
-            continue
+        if "mountTurret" in b or "mount" in b or rides_part(b) >= 0:
+            continue          # riders draw inside their carrier's slot
         (above if barrel_above(b) else under).append((int(b.get("order", 0)), 0, i, "barrel"))
     for i, s in enumerate(shapes):
-        if "mountTurret" in s or "mount" in s:
+        if "mountTurret" in s or "mount" in s or rides_part(s) >= 0:
             continue
         (above if s.get("aboveBody") else under).append((int(s.get("order", 0)), 1, i, "shape"))
     for i, t in enumerate(turrets):
