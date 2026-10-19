@@ -67,8 +67,9 @@ def stroke_of(rgb):
 def palette_rgb(idx, default, owner=None):
     """A colour value -> rgb (or rgba when a hex string carries alpha). A palette index, or since
     2026-10-06 a hex string '#rrggbb' / '#rrggbbaa'. 27 is "same color as the body": the hull's own
-    colour when the hull has one (spec section 10, Confirmed in play 2026-09-30), else the team colour,
-    for which we show player blue. `owner` is the hull's resolved colour (None = team-coloured hull)."""
+    colour when the hull has a palette colour (spec section 10, Confirmed in play 2026-09-30), else the
+    team colour, for which we show player blue; a HEX hull does not pass its colour on (play 2026-10-06).
+    `owner` is the hull's resolved palette colour (None = team-coloured or hex hull)."""
     if idx is None:
         idx = default
     if is_hex(idx):
@@ -186,7 +187,10 @@ def tank_ops(tank, exporter_quirks=False, aim=0.0):
     shapes = tank.get("bodyShapes") or []
     turrets = tank.get("turrets") or []
     body = tank.get("body") or {}
-    owner = palette_rgb(body["color"], 2) if body.get("color") is not None and body.get("color") != 27 else None
+    # 27 ("same color as the body") takes the hull's colour only when the hull has a PALETTE colour; on a hex
+    # hull it shows the team colour (play 2026-10-06, spec section 10), so owner stays None there
+    hull_rgb = palette_rgb(body["color"], 2) if body.get("color") is not None and body.get("color") != 27 else None
+    owner = hull_rgb if isinstance(body.get("color"), int) else None
 
     def colour(part, default):
         return palette_rgb(part.get("color"), default, owner)
@@ -339,7 +343,7 @@ def tank_ops(tank, exporter_quirks=False, aim=0.0):
     # 2. hull
     sides = int(body.get("sides", 0))
     size = float(body.get("size", HULL_RADIUS))
-    rgb = owner if owner is not None else hexrgb(PALETTE[OWNER_COLOR])
+    rgb = hull_rgb if hull_rgb is not None else hexrgb(PALETTE[OWNER_COLOR])
     if sides <= 2:
         ops.append(("circle", (0.0, 0.0), size, rgb))
     else:

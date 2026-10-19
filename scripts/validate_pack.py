@@ -56,7 +56,8 @@ TURRET_KEYS = {"xOffset", "yOffset", "angle", "arc", "range", "controllable", "a
 TANK_EDITOR_KEYS = {"replaces", "disabled", "boss", "advancesInto", "upgradesFrom"}   # the last two: a player-built pack's editor-only tree notes
 # custom bosses (spec §1b, read from the editor's code 2026-10-06): a pack-level record that wraps a tank
 BOSS_KEYS = {"id", "tank", "name", "spawnMessage", "neutralTeam", "claimable", "maxHealth", "xpBounty", "scale",
-             "damageOnTouch", "knockbackMultiplier", "ai", "spawn", "editor", "minDamageMultiplier"}
+             "damageOnTouch", "knockbackMultiplier", "statLevels", "ai", "spawn", "editor", "minDamageMultiplier"}
+BOSS_STOCK_LEVELS = [7, 7, 7, 7, 7, 7, 7, 0]   # statLevels default, the editor's "Stock levels" (spec §1b, 2026-10-09)
 BOSS_AI_KEYS = {"floatSpeed", "rotationChangeSpeed", "looksForward", "hoverAroundCenter", "aggressiveCrashRadius",
                 "aggressiveCrashSpeed", "minTargetLevel", "hoverRadius", "keepDistanceMin", "keepDistanceMax",
                 "wanderWhileFighting", "leadShots", "seesInvisible", "onlyPlayers", "brain", "botSkill", "botRetreat",
@@ -426,7 +427,7 @@ def check_turret(rep, uw, u):
         rep.error(uw, "turrets cannot be mounted on anything (mountTurret on a turret is ignored)")
 
 
-def check_tank(rep, ti, t, pack_ids, hidden, shape_ids=()):
+def check_tank(rep, ti, t, pack_ids, hidden, shape_ids=(), boss_reload=None):
     where = f"tanks[{ti}]"
     if not check_keys(rep, where, t, TANK_KEYS):
         return
@@ -626,14 +627,14 @@ def check_tank(rep, ti, t, pack_ids, hidden, shape_ids=()):
             if "boss" in t["editor"] and not isinstance(t["editor"]["boss"], bool):
                 rep.error(where + ".editor", "boss must be a boolean")
     if is_boss_tank(t):
-        # spec §1b: a boss-only tank is out of the tree and the starters, and plays with every stat at level 7,
-        # health regen 0, whatever statsMaxLevel says; the import budget rates it at max(cap, 7)
+        # spec §1b: a boss-only tank is out of the tree and the starters; its stat levels come from the boss
+        # record's statLevels (2026-10-09), so statsMaxLevel does not apply to it
         if t.get("upgradesFrom") or t.get("advancesInto"):
             rep.warn(where, "editor.boss with tree links: a boss-only tank is dropped from the class tree, so "
                             "upgradesFrom / advancesInto do nothing (spec §1b)")
         if isinstance(sml, list) and len(sml) == 8 and sml != [7] * 8:
-            rep.warn(where, f"editor.boss with statsMaxLevel {sml}: a boss plays with all stats at level 7 and health "
-                            "regen 0 regardless (the editor's Stat levels panel is read-only on a boss, spec §1b)")
+            rep.warn(where, f"editor.boss with statsMaxLevel {sml}: a boss's stat caps do not apply; set the levels it "
+                            "plays at in its boss record's statLevels (spec §1b, 2026-10-09)")
 
     # holistic warnings
     has_raises = bool(raises)
@@ -657,7 +658,7 @@ def check_tank(rep, ti, t, pack_ids, hidden, shape_ids=()):
     check_import_limits(rep, where, t)
     # the lobby's import budget (spec §7a): the editor's own estimate, which reproduces every refusal
     # message seen word for word; the lobby refuses the first limit a tank passes, in this order
-    b = import_budget(t)
+    b = import_budget(t, boss_reload=boss_reload)
     if b["drones"] > LIMIT_DRONES:
         rep.error(where, f"has {b['drones']} drones; a tank may have {LIMIT_DRONES} (spec §7a)")
     if b["pieces"] > LIMIT_PIECES:
@@ -687,7 +688,7 @@ def check_tank(rep, ti, t, pack_ids, hidden, shape_ids=()):
 # are dropped, numbers past these are clamped, and what it then sends to the lobby is its own export.
 MAX_BODY_SHAPES = 32      # per tank, and parts per projectile
 MAX_BARRELS = 32          # per tank, and sub-barrels per projectile
-MAX_TURRETS = 8           # per tank, and per projectile
+MAX_TURRETS = 9           # per tank, and per projectile (8 before the editor update of 2026-10-09)
 MAX_PROJECTILES = 16
 MAX_TANKS = 512
 MAX_CUSTOM_SHAPES = 256
@@ -899,8 +900,22 @@ def _editor_projectile(p):
     }
 
 
-def import_budget(t):
-    """The editor's estimate of what the lobby checks (spec §7a): rate, alive, load, drones, volley, pieces."""
+def boss_reload_level(pack, tank_id):
+    """The Reload level a boss tank is rated at (spec §1b, 2026-10-09): the highest statLevels[1] of the boss
+    records that wrap it (a record without statLevels plays the stock 7); None when no record wraps it."""
+    best = None
+    for b in pack.get("bosses") or []:
+        if isinstance(b, dict) and b.get("tank") == tank_id:
+            lv = b.get("statLevels")
+            v = lv[RELOAD_STAT_INDEX] if isinstance(lv, list) and len(lv) == 8 and is_num(lv[RELOAD_STAT_INDEX]) else 7
+            v = max(0, min(12, round(v)))
+            best = v if best is None else max(best, v)
+    return best
+
+
+def import_budget(t, boss_reload=None):
+    """The editor's estimate of what the lobby checks (spec §7a): rate, alive, load, drones, volley, pieces.
+    `boss_reload` is the boss record's Reload level for a boss tank (None = the stock 7)."""
     projs = [_editor_projectile(p) for p in (t.get("projectiles") or [])[:MAX_PROJECTILES]]
     bars = [_editor_barrel(b) for b in (t.get("barrels") or [])[:MAX_BARRELS] if isinstance(b, dict)]
     for b in bars:            # an out-of-range projectile fires nothing; alternatives share the primary's base
@@ -927,7 +942,7 @@ def import_budget(t):
     cap = caps[RELOAD_STAT_INDEX] if isinstance(caps, list) and len(caps) == 8 else 7
     cap = max(0, min(12, round(cap))) if is_num(cap) else 7
     if is_boss_tank(t):
-        cap = max(cap, 7)               # a boss plays every stat at 7 (spec §1b)
+        cap = max(cap, boss_reload if boss_reload is not None else 7)   # the boss record's Reload level (spec §1b)
     period = 15 * 0.914 ** cap          # ticks per shot at reload 1 with Reload maxed
 
     def shots(b, n):                    # per second, 25 ticks a second, whole ticks only
@@ -1104,6 +1119,13 @@ def check_boss(rep, bw, b, pack_ids, tanks_by_id):
     for k in ("neutralTeam", "claimable"):
         if k in b and not isinstance(b[k], bool):
             rep.error(bw, f"{k} must be a boolean")
+    lv = b.get("statLevels")
+    if lv is not None:
+        if not isinstance(lv, list) or len(lv) != 8 or not all(is_num(v) for v in lv):
+            rep.error(bw, f"statLevels must be a list of eight numbers in statsMaxLevel order (0 Movement Speed ... "
+                          f"7 Health Regen); anything else imports as the stock levels {BOSS_STOCK_LEVELS} (spec §1b)")
+        elif any(not 0 <= v <= 12 for v in lv):
+            rep.warn(bw, f"statLevels {lv}: each level is rounded and clamped to 0-12 on import")
     for k, (lo, hi) in BOSS_CLAMPS.items():
         if k in b:
             if not is_num(b[k]):
@@ -1155,7 +1177,7 @@ def check_boss(rep, bw, b, pack_ids, tanks_by_id):
     t = tanks_by_id.get(tank)
     if t is not None and not is_boss_tank(t):
         rep.warn(bw, f"its tank {t.get('name')!r} is also a playable tank (no editor.boss): fine, but a boss copy "
-                     "(editor.boss: true) keeps it out of the class tree and plays it at level 7")
+                     "(editor.boss: true) keeps it out of the class tree")
     if t is not None and (t.get("raises") or any((bb.get("flags") or {}).get("holdsRaised")
                                                  for bb in t.get("barrels") or [] if isinstance(bb, dict))) \
             and b.get("neutralTeam", True):
@@ -1374,7 +1396,8 @@ def validate(pack):
         rep.error("pack", f"the pack is {round(size / 1024)} KB; the lobby takes {MAX_PACK_BYTES // 1024} KB "
                           "(spec §0): split it or trim barrels and parts")
     for ti, t in enumerate(tanks):
-        check_tank(rep, ti, t, set(pack_ids), set(hidden), shape_ids)
+        check_tank(rep, ti, t, set(pack_ids), set(hidden), shape_ids,
+                   boss_reload=boss_reload_level(pack, t.get("id")) if isinstance(t, dict) else None)
     check_upgrade_counts(rep, tanks, set(hidden) if isinstance(hidden, list) else set())
     # the lobby's shape spawn budget (spec §1a, the editor's load-time refusals, 2026-10-06)
     hs = pack.get("hiddenShapes") if isinstance(pack.get("hiddenShapes"), list) else []
@@ -1587,7 +1610,7 @@ def stock_twins(pack, twins=None):
 
 # --- summary ----------------------------------------------------------------------------
 
-def describe_tank(t, pack_ids_to_names):
+def describe_tank(t, pack_ids_to_names, boss_reload=None):
     def tank_name(i):
         if i in VANILLA_NAMES:
             return f"{VANILLA_NAMES[i]} (vanilla {i})"
@@ -1675,8 +1698,8 @@ def describe_tank(t, pack_ids_to_names):
     if t.get("helpText"):
         parts.append(f"help: \"{t['helpText']}\"")
     if is_boss_tank(t):
-        parts.append("boss-only tank (out of the tree; plays at level 7)")
-    b = import_budget(t)
+        parts.append("boss-only tank (out of the tree; plays at its boss record's statLevels)")
+    b = import_budget(t, boss_reload=boss_reload)
     parts.append(f"import budget {b['rate']:.0f}/{LIMIT_RATE} per second, {b['alive']:.0f}/{LIMIT_ALIVE} in the air, "
                  f"room {b['load']:.0f}/{LIMIT_LOAD}, volley {b['volley']}/{LIMIT_VOLLEY}, "
                  f"pieces {b['pieces']}/{LIMIT_PIECES}" + (f", drones {b['drones']}/{LIMIT_DRONES}" if b["drones"] else ""))
@@ -1794,7 +1817,7 @@ def main(argv):
                 (", stock weights " + json.dumps(r["stockWeights"])) if r.get("stockWeights") else ""))
         for t in tanks:
             if isinstance(t, dict):
-                print(describe_tank(t, names))
+                print(describe_tank(t, names, boss_reload_level(pack, t.get("id"))))
     status = "FAIL" if rep.errors else "OK"
     print(f"{status}: {path}: {len(tanks)} tank(s), {len(rep.errors)} error(s), {len(rep.warnings)} warning(s)")
     return 1 if rep.errors else 0

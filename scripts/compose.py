@@ -33,7 +33,8 @@ Conventions (all confirmed in references/schema/ unless marked GUESS):
     "#rrggbbaa" (C.rgb(), C.rgba(), C.alpha()); alpha draws translucent in play
   * a boss is a pack-level record wrapping a tank: Pack.boss(tank, ...) with the editor's own
     words (brain, behaviour, idle, size, health, xp, ring, weight); Design(..., boss=True) or
-    Pack.boss(..., boss_only=True) marks the tank boss-only (out of the tree, stats fixed at 7)
+    Pack.boss(..., boss_only=True) marks the tank boss-only (out of the tree); levels=dict(reload=4,
+    body_damage=12, ...) sets the level the boss plays each stat at (the record's statLevels)
   * `with d.frame(at, angle):` builds a sub-assembly in local coordinates (a claw, a gun pod,
     an eye pair) and places it; nest frames freely; mirror() the result afterwards
   * stock weapon systems are one call each (mechanics.py): d.twin(), d.spawner(), d.destroyer(),
@@ -42,7 +43,7 @@ Conventions (all confirmed in references/schema/ unless marked GUESS):
     human-pack tricks are presets too: d.jaws(), d.trail(), d.eye(), d.cursor_pivot(),
     d.contact_damage(), d.turreted_bullet(), auto_fire=True on any gun
   * save() reports parts the hull would swallow and the figure's overall span
-  * budget: 32 body shapes, 32 barrels and 8 turrets per tank (the editor drops the rest), 8
+  * budget: 32 body shapes, 32 barrels and 9 turrets per tank (the editor drops the rest), 8
     collidable parts per tank (3 per projectile), and the lobby's import budget (120/s, 250
     alive, 2000 room, 64 per volley, 96 drones, 96 pieces; spec 7a); save() warns and the
     validator errors when a design is over; save() also prints the arena's shape budget (room
@@ -74,7 +75,7 @@ INVIS_LOSS = 0.05
 MAX_BARREL_LENGTH = 500
 MAX_BODY_SHAPES = 32  # the editor keeps 32 body shapes and 32 barrels per tank and drops the rest (spec §9c)
 MAX_BARRELS = 32
-MAX_TURRETS = 8      # the editor keeps 8 turrets per tank and per projectile (spec §9c)
+MAX_TURRETS = 9      # the editor keeps 9 turrets per tank and per projectile (spec §9c; 8 before 2026-10-09)
 MAX_PIECES = 96       # shapes + barrels + turrets on the tank and all its projectiles (spec §9c)
 MAX_COLLIDABLE = 8    # collidable parts per tank (3 per projectile); the rest become drawing-only (spec §8)
 MAX_RIDE_DEPTH = 4    # parts nest 4 deep at most (spec §8)
@@ -926,8 +927,7 @@ class Tank(_mechanics()):
             if k not in ("invisibility", "statsMaxLevel"):
                 t[k] = v
         if getattr(self, "boss_only", False):
-            t["editor"] = dict(t.get("editor") or {}, boss=True)
-            t["statsMaxLevel"] = [7] * 8         # a boss plays every stat at 7; the panel is read-only (spec §1b)
+            t["editor"] = dict(t.get("editor") or {}, boss=True)   # its levels come from the boss record (spec §1b)
         barrels = [d for k, d in self.parts if k == "barrel"]
         shapes = [d for k, d in self.parts if k == "shape"]
         turrets = [d for k, d in self.parts if k == "turret"]
@@ -961,7 +961,7 @@ class Tank(_mechanics()):
 
     def boss_tank(self, on=True):
         """Mark this tank boss-only (editor.boss): out of the class tree and the starters, played only as a
-        boss, every stat at level 7 (spec §1b). Pack.boss(tank) does this by default."""
+        boss at the levels its boss record sets (spec §1b). Pack.boss(tank) does this by default."""
         self.boss_only = bool(on)
         return self
 
@@ -1118,7 +1118,7 @@ class Pack:
              xp=30000, touch_damage=10, knockback=0.05, drift=0.5, turn=0, faces_forward=None, spot_range=1500,
              charge_speed=0.8, keep=(0, 0), circle_radius=0, min_level=15, lead_shots=True, sees_invisible=False,
              only_players=False, skill=0.7, retreat=0, ring=(0, 0.4), weight=1, message=None, neutral=True,
-             claimable=True, boss_id=None, boss_only=True, **raw):
+             claimable=True, levels=None, boss_id=None, boss_only=True, **raw):
         """A custom boss (spec §1b, the editor's Bosses tab, 2026-10-06): a pack-level record that wraps
         `tank`, a Tank of this pack, a stock tank's name or vanilla id (a giant stock Octo Tank). The
         arguments are the editor's own labels:
@@ -1141,8 +1141,13 @@ class Pack:
           message: what the arena announces when it spawns; neutral: on the shapes' team (bases ignore it;
                  False makes a Fallen-style enemy that bases attack, needed for a necromancer boss);
                  claimable: players can press H to take it over where the lobby allows
+          levels: the level the boss plays each stat at (the record's statLevels, 2026-10-09; the tank's
+                 own stat caps do not apply). None = the editor's stock levels, 7 on everything and 0
+                 Health Regen. A dict by stat name changes some: speed, reload, bullet_damage,
+                 penetration, bullet_speed, body_damage, max_health, regen (each 0-12); "max" = eight 12s
+                 (the editor's "Max all"); or a list of eight ints in statsMaxLevel order
           boss_only (default True): a Tank of this pack gets editor.boss, which takes it out of the class
-                 tree and fixes its stats at level 7; pass False to keep it playable too
+                 tree; pass False to keep it playable too
           raw: any other record key: minDamageMultiplier (a floor on shot damage; the game writes 4, 6 on
                  Fallen Booster, and 6 bit clearly harder in play), ai=dict(...) merged, editor=...
         The console name is the name lower-cased without spaces (`spawn_boss <name>`). The record is
@@ -1180,6 +1185,8 @@ class Pack:
                                ("damageOnTouch", touch_damage, 10), ("knockbackMultiplier", knockback, 0.05)):
             if val != dflt:
                 rec[key] = val
+        if levels is not None:
+            rec["statLevels"] = self.boss_levels(levels)
         ai = {}
         if drift != 0.5:
             ai["floatSpeed"] = drift
@@ -1231,6 +1238,29 @@ class Pack:
         rec.update(raw)
         self.bosses.append(rec)
         return rec
+
+    BOSS_STATS = ("speed", "reload", "bullet_damage", "penetration", "bullet_speed", "body_damage",
+                  "max_health", "regen")              # statsMaxLevel order (spec §3): index 0 Movement Speed ... 7 Regen
+    BOSS_STOCK_LEVELS = [7, 7, 7, 7, 7, 7, 7, 0]      # the editor's "Stock levels" (spec §1b)
+
+    @classmethod
+    def boss_levels(cls, levels):
+        """A boss record's statLevels (spec §1b) from a dict by stat name (the rest stay at the stock
+        levels), the word "max" (eight 12s) or a list of eight ints. Each level is clamped to 0-12."""
+        if levels == "max":
+            out = [12] * 8
+        elif isinstance(levels, dict):
+            bad = set(levels) - set(cls.BOSS_STATS)
+            if bad:
+                raise ValueError(f"boss levels: unknown stat(s) {sorted(bad)}; use {cls.BOSS_STATS}")
+            out = list(cls.BOSS_STOCK_LEVELS)
+            for k, v in levels.items():
+                out[cls.BOSS_STATS.index(k)] = v
+        else:
+            out = list(levels)
+            if len(out) != 8:
+                raise ValueError("boss levels: a list must hold eight levels, in statsMaxLevel order")
+        return [max(0, min(12, int(round(v)))) for v in out]
 
     def boss_rotation(self, every=45, first=45, max_alive=1, min_players=0, stock_weights=None):
         """The lobby's boss clock while this pack is loaded (spec §1b): a boss every `every` minutes

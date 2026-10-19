@@ -754,22 +754,30 @@ d = Design("Headless Horseman", level=1, author="☀️", boss=True)   # boss=Tr
 ... parts, jaws, spawner, cannon ...
 d.pack.boss(d, name="Headless Horseman", brain="simple", behaviour="charge", idle="wander",
             size=2.5, health=6000, xp=50000, ring=(0, 0.4), weight=1,
-            message="Hoofbeats... the Headless Horseman rides!")
+            message="Hoofbeats... the Headless Horseman rides!",
+            levels=dict(body_damage=12, max_health=10, reload=4))      # the rest stay at 7, regen 0
 d.pack.boss_rotation(every=30, first=10, max_alive=1)                  # optional: the lobby's clock
 ```
 
 What the JSON carries, sparse like the game's own records: `{"tank":100001,"name":"Headless
-Horseman","spawnMessage":"…","maxHealth":6000,"xpBounty":50000,"scale":2.5,"ai":{"aggressiveCrashRadius":1500}}`
-plus `"editor":{"boss":true}` and `statsMaxLevel` all 7 on the tank.
+Horseman","spawnMessage":"…","maxHealth":6000,"xpBounty":50000,"scale":2.5,"statLevels":[7,4,7,7,7,12,10,0],"ai":{"aggressiveCrashRadius":1500}}`
+plus `"editor":{"boss":true}` on the tank.
 
 **Sizing against the stock bosses.** The five lobby bosses are `scale` 1.55 (Guardian), 1.72
 (Summoner, Defender), 2.09 (the Fallen pair) at **3000 health**, and Decade 2.87 at 10000 / 100000
 score. Health does not grow with scale, so a scale-4 record at 3000 is a big, soft target: 2–3 at
 4000–8000 health is boss-grade for a sandbox lobby; keep the figure's own `baseHealth` and
 `baseBodyDamage` stock (the record's `damageOnTouch` 10, Fallen Booster 12, is the body damage).
-Every stat plays at **level 7**, so a boss with a Reload cap of 12 fires like one at 7; the budget
-rates it that way. Big parts, strong contrast and few colours survive the scale; fine line art
-does not (render with `--boss` and look).
+**The boss's stat levels** (`levels=`, the record's `statLevels`, since the editor update of
+2026-10-09; spec §1b) are the knob that makes a boss hit like one: the tank's own stat caps do not
+apply. The default plays 7 on everything and 0 Health Regen, the stock bosses' way. Choose by what
+the subject does: a rammer gets `body_damage` and `max_health` 10–12 and a low `reload`; a gunner
+`reload` and `bullet_damage` 10–12 (the budget then rates it faster, §7a: a Reload-12 boss fires
+1.5× a Reload-7 one on paper and may need fewer guns); a kiter `speed` 10–12; a siege boss that
+must be worn down, `max_health` 12 and `regen` 0; `regen` above 0 is a deliberate choice (it heals
+between fights). `levels="max"` writes eight 12s, the editor's "Max all". Each level 0–12. Big parts,
+strong contrast and few colours survive the scale; fine line art does not (render with `--boss`
+and look).
 
 **Which brain.** `simple` (the editor: "drifts, rams, shoots") is the stock bosses' brain: it
 drifts, turns toward a player it spots and fires every gun; its turrets and drones fight on their

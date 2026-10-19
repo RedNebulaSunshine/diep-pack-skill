@@ -23,10 +23,11 @@ The spec is split by family. Read the family a design touches:
 | `05-shapes-and-turrets.md` | body shapes (including parts that ride parts and fixed rotation), turrets, draw order, the drawing rules, the 32-part limit |
 | `06-palette-and-ids.md` | colour palette with the editor's swatch names, exact hex colours with opacity; vanilla tank IDs |
 
-**Checked against the editor's code of 2026-10-06** (bundle `index-67ee240f.js`, the update that
-added custom bosses, exact colours, parts riding on parts, fixed rotation, eight hitboxes per tank
-and a shape spawn budget). Everything from that update is tagged **Confirmed (editor code)** until
-played; the open play questions are in §13 item 22.
+**Checked against the editor's code of 2026-10-09** (bundle `index-4248191f.js`; the update of
+2026-10-06 added custom bosses, exact colours, parts riding on parts, fixed rotation, eight hitboxes
+per tank and a shape spawn budget; the update of 2026-10-09 added a boss's own stat levels and a ninth
+turret). Everything read from the code and not yet played is tagged **Confirmed (editor code)**; the
+open play questions are in §13 items 22 and 23.
 
 Section numbers (§1 to §13) are kept from the original single document so cross-references in
 the recipes, the scripts and the validator still resolve. `references/quick-reference.md` condenses
@@ -127,6 +128,16 @@ writes `aboveBody: false`).
    Still open: a boss from a **stock tank** at scale 4 (spawned, not studied); the rotation sentence
    after loading; what `ai.directionChangeSpeed` does; whether a bot-brain boss engages with a "Charge"
    behaviour or a higher skill.
+23. *(found 2026-10-18, from the editor's code of 2026-10-09; not played)* **The editor update of
+   2026-10-09.** A boss record's `statLevels` (§1b) sets the level the boss plays each stat at (0–12,
+   default `[7,7,7,7,7,7,7,0]`); the tank's `statsMaxLevel` no longer applies to a boss, and the import
+   budget rates the boss at max(Reload cap, boss Reload level). A tank and a projectile keep **nine**
+   turrets (§9c; eight before). The game's notes also say the server now stops tanks that spawned
+   more drones than the limits allow, and no longer counts barrels and projectiles that never fire
+   toward a tank's limits (server side; the editor's budget is unchanged). Open in play: that the
+   levels bite (three boss copies of one gun tank at 0, default and 12 should fire and move
+   differently); whether Health Regen above 0 regenerates a boss; the stock bosses' real `statLevels`
+   (a fresh game export shows them, since the editor now always writes the key).
 
 Resolved: Q1–9, Q11–19, Q21–26 of the original list, plus `preSpawn`, `burst`,
 `firesOnDeath`, `numBullets`, range-valued multipliers and `droneControllable` found along
