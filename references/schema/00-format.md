@@ -128,16 +128,21 @@ writes `aboveBody: false`).
    Still open: a boss from a **stock tank** at scale 4 (spawned, not studied); the rotation sentence
    after loading; what `ai.directionChangeSpeed` does; whether a bot-brain boss engages with a "Charge"
    behaviour or a higher skill.
-23. *(found 2026-10-18, from the editor's code of 2026-10-09; not played)* **The editor update of
+23. *(found 2026-10-18 from the editor's code of 2026-10-09; played 2026-10-18)* **The editor update of
    2026-10-09.** A boss record's `statLevels` (§1b) sets the level the boss plays each stat at (0–12,
    default `[7,7,7,7,7,7,7,0]`); the tank's `statsMaxLevel` no longer applies to a boss, and the import
    budget rates the boss at max(Reload cap, boss Reload level). A tank and a projectile keep **nine**
    turrets (§9c; eight before). The game's notes also say the server now stops tanks that spawned
    more drones than the limits allow, and no longer counts barrels and projectiles that never fire
-   toward a tank's limits (server side; the editor's budget is unchanged). Open in play: that the
-   levels bite (three boss copies of one gun tank at 0, default and 12 should fire and move
-   differently); whether Health Regen above 0 regenerates a boss; the stock bosses' real `statLevels`
-   (a fresh game export shows them, since the editor now always writes the key).
+   toward a tank's limits (server side; the editor's budget is unchanged). **Played 2026-10-18 (probe
+   0.4.0): the levels bite.** Three boss copies of one gun tank at all 0, stock and all 12: the all-12
+   boss fired fastest and its bullets flew fastest, the all-0 boss slowest on both (Reload and Bullet
+   Speed work as on a tank). **Movement went the other way: the all-0 boss moved fastest, stock next,
+   all-12 slowest.** The level total slows a boss, as a tank's level does; whether Movement Speed 12
+   on its own speeds a boss up, and which stat does the slowing, is open (probe 0.5.0: Speed 12 alone;
+   everything but Speed at 12; Max Health 12 alone). Health Regen 12 heals a boss after a hit. A tank
+   with nine turrets imports with all nine and all nine fire. A game export of 2026-10-18 writes
+   `[7,7,7,7,7,7,7,0]` on all six stock bosses: the editor's "Stock levels" are the real ones.
 
 Resolved: Q1–9, Q11–19, Q21–26 of the original list, plus `preSpawn`, `burst`,
 `firesOnDeath`, `numBullets`, range-valued multipliers and `droneControllable` found along

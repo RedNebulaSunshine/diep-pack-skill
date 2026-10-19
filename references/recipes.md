@@ -773,9 +773,13 @@ score. Health does not grow with scale, so a scale-4 record at 3000 is a big, so
 apply. The default plays 7 on everything and 0 Health Regen, the stock bosses' way. Choose by what
 the subject does: a rammer gets `body_damage` and `max_health` 10–12 and a low `reload`; a gunner
 `reload` and `bullet_damage` 10–12 (the budget then rates it faster, §7a: a Reload-12 boss fires
-1.5× a Reload-7 one on paper and may need fewer guns); a kiter `speed` 10–12; a siege boss that
-must be worn down, `max_health` 12 and `regen` 0; `regen` above 0 is a deliberate choice (it heals
-between fights). `levels="max"` writes eight 12s, the editor's "Max all". Each level 0–12. Big parts,
+1.5× a Reload-7 one on paper and may need fewer guns); a siege boss that must be worn down,
+`max_health` 12 and `regen` 0; `regen` above 0 is a deliberate choice (confirmed 2026-10-18: Regen 12
+heals a boss after a hit). **A fast boss keeps its level total low**: in play (2026-10-18) the copy with
+every level at 0 outran the stock one, and the copy with every level at 12 was the slowest, so pace
+comes from low levels and the record's `ai` speeds (`charge_speed`, `float_speed`), not from `speed`
+10–12 on its own (whether Speed alone helps is open, spec §13 item 23); a rammer therefore trades: high
+`body_damage` and `max_health` make it slower. `levels="max"` writes eight 12s, the editor's "Max all". Each level 0–12. Big parts,
 strong contrast and few colours survive the scale; fine line art does not (render with `--boss`
 and look).
 
