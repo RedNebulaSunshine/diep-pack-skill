@@ -138,9 +138,12 @@ writes `aboveBody: false`).
    0.4.0): the levels bite.** Three boss copies of one gun tank at all 0, stock and all 12: the all-12
    boss fired fastest and its bullets flew fastest, the all-0 boss slowest on both (Reload and Bullet
    Speed work as on a tank). **Movement went the other way: the all-0 boss moved fastest, stock next,
-   all-12 slowest.** The level total slows a boss, as a tank's level does; whether Movement Speed 12
-   on its own speeds a boss up, and which stat does the slowing, is open (probe 0.5.0: Speed 12 alone;
-   everything but Speed at 12; Max Health 12 alone). Health Regen 12 heals a boss after a hit. A tank
+   all-12 slowest.** Probe 0.5.0 (played 2026-10-18) against the stock boss: Movement Speed 12 alone
+   showed no visible gain; Max Health 12 alone showed no visible loss; every stat but Movement Speed at 12
+   was clearly slower. So **the level total slows a boss** (sums: all 0 = 0, stock 42, one stat at 12 = 47,
+   all but Speed at 12 = 91, all 12 = 96), and a Movement Speed level does not buy the pace back. The
+   editor only stores the key; the server applies it, so the exact formula is not readable. Still open:
+   whether one of the six raised stats does all the slowing on its own (a lower-priority check). Health Regen 12 heals a boss after a hit. A tank
    with nine turrets imports with all nine and all nine fire. A game export of 2026-10-18 writes
    `[7,7,7,7,7,7,7,0]` on all six stock bosses: the editor's "Stock levels" are the real ones.
 

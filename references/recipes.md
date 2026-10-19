@@ -778,8 +778,9 @@ the subject does: a rammer gets `body_damage` and `max_health` 10–12 and a low
 heals a boss after a hit). **A fast boss keeps its level total low**: in play (2026-10-18) the copy with
 every level at 0 outran the stock one, and the copy with every level at 12 was the slowest, so pace
 comes from low levels and the record's `ai` speeds (`charge_speed`, `float_speed`), not from `speed`
-10–12 on its own (whether Speed alone helps is open, spec §13 item 23); a rammer therefore trades: high
-`body_damage` and `max_health` make it slower. `levels="max"` writes eight 12s, the editor's "Max all". Each level 0–12. Big parts,
+10–12 (Speed 12 alone gave no visible gain, spec §13 item 23). One or two stats raised to 12 cost no
+visible pace; raising most of them does. So pick the one or two stats the subject is known for, leave
+the rest stock, and lower the stats it does not use (a rammer's `reload`, `bullet_speed`) to pay for them. `levels="max"` writes eight 12s, the editor's "Max all". Each level 0–12. Big parts,
 strong contrast and few colours survive the scale; fine line art does not (render with `--boss`
 and look).
 
