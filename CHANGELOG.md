@@ -5,6 +5,14 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.9.2 (2026-10-18)
+
+- Which boss levels slow a boss, played (spec §13 item 23, §1b; recipes §34). Movement Speed 12
+  alone gave no visible gain over the stock levels; Max Health 12 alone cost no visible pace; every
+  stat but Movement Speed at 12 was clearly slower. The level total slows a boss, and a Movement
+  Speed level does not buy the pace back. So raise the one or two stats the subject is known for and
+  lower the ones it does not use. No code change.
+
 ## 1.9.1 (2026-10-18)
 
 - The boss stat levels of 1.9.0, now played (spec §13 item 23, §1b; recipes §34). Reload, Bullet
