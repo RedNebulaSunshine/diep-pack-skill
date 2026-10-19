@@ -5,6 +5,17 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.9.1 (2026-10-18)
+
+- The boss stat levels of 1.9.0, now played (spec §13 item 23, §1b; recipes §34). Reload, Bullet
+  Speed and Health Regen act on a boss as on a tank (a Regen-12 boss heals after a hit). **A boss
+  with a higher level total moves slower**: of three copies of one gun tank, the all-0 boss moved
+  fastest, the stock one next, the all-12 one slowest. So a boss that must chase keeps its levels
+  low and takes its pace from the record's `ai` speeds; a rammer with Body Damage and Max Health 12
+  is slower for it. Which stat does the slowing is open. Nine turrets on one tank all import and
+  fire. A game export of 2026-10-18 shows every stock boss at `[7,7,7,7,7,7,7,0]`, the editor's
+  "Stock levels". No code change.
+
 ## 1.9.0 (2026-10-18)
 
 - The editor update of 2026-10-09, read from the editor's own code (not yet played; the open
