@@ -3,7 +3,7 @@ name: diep-pack
 description: "Design custom Diep.io content as a .diep-pack for the official sandbox editor, from a plain-English description or a picture (a sketch, a drawing or photo of the subject, a screenshot of a tank): tanks (barrels, projectiles, drones, traps, homing missiles, turrets, body shapes, stealth, stats, tree placement), figurative tanks built from many parts (dragonfly, crab, starship), custom bosses the arena spawns (a boss copy of any tank), exact colours, parts that orbit a spinning part, and themed arenas of custom shapes (food, crashers, walls, prizes). For any character, creature, vehicle, object or theme it imagines what the subject is known for and turns that into moves the game can perform (a sword that swings, a sidekick that follows, eggs that hatch), then pitches them in one question before building. Use whenever the user wants to create, tweak or edit a Diep.io tank, a line of tanks, a boss or the arena, also from an attached image (make this, turn my drawing into a tank). Edit mode: PACK: CHANGE."
 license: MIT
 metadata:
-  version: "1.8.0"
+  version: "1.9.0"
   repository: "https://github.com/RedNebulaSunshine/diep-pack-skill"
   requires: "Python 3.8+; Pillow for PNG renders (optional)"
 ---
@@ -174,8 +174,9 @@ Then turn the description and the moves into a design sheet before writing JSON:
   `hiddenShapes` through `references/arena.md` (built when the request is about the map,
   offered in one line after a themed tank); **bosses** (spec §1b, recipes §34): a boss is a
   pack-level record wrapping a tank, `Pack.boss(tank, brain=, behaviour=, idle=, size=, health=,
-  xp=, ring=, weight=)`, usually a boss-only copy (`editor.boss`) of a figurative tank, drawn at
-  its scale with every stat at 7; "a boss", "a raid", "a guardian of the arena", "something the
+  xp=, ring=, weight=, levels=)`, usually a boss-only copy (`editor.boss`) of a figurative tank, drawn at
+  its scale, playing each stat at the level the record sets (`levels=dict(body_damage=12, ...)`,
+  default 7 and no regen); "a boss", "a raid", "a guardian of the arena", "something the
   map spawns" are boss requests, not boss-shape requests any more.
 - **Parts that ride parts and parts that hold still** (spec §8, recipes §35): `shape(ride=plate)`
   puts a part on another part, so a spinning carrier swings it round (`orbit()` for moons, a

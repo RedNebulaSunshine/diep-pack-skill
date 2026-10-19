@@ -5,6 +5,26 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.9.0 (2026-10-18)
+
+- The editor update of 2026-10-09, read from the editor's own code (not yet played; the open
+  checks are spec §13 item 23). **A boss has its own stat levels**: the boss record's `statLevels`
+  (eight levels 0–12 in `statsMaxLevel` order, default 7 everywhere and 0 Health Regen, the
+  editor's "Stock levels") sets the level the boss plays each stat at; the tank's own stat caps
+  no longer apply to a boss. `Pack.boss(..., levels=dict(body_damage=12, max_health=10, reload=4))`
+  writes it by stat name (`speed, reload, bullet_damage, penetration, bullet_speed, body_damage,
+  max_health, regen`), `levels="max"` writes eight 12s; `compose` no longer forces a boss tank's
+  `statsMaxLevel` to 7s; the validator checks the key and rates a boss tank's import budget at the
+  record's Reload level, as the editor does (a Reload-12 boss is rated 1.5× a Reload-7 one);
+  spec §1b, recipes §34 (which stats for which kind of boss). **Nine turrets** per tank and per
+  projectile (eight before): spec §9c, `compose` and the validator. The game's notes also say the
+  server now stops tanks that spawned more drones than the limits allow and no longer counts
+  barrels that never fire toward a tank's limits; the editor's budget code is unchanged, so the
+  skill's budget is too.
+- Fixed (issue #4): `render_pack.py` drew a colour-27 part on a **hex**-coloured hull in the hull's
+  hex; in play it shows the team colour (2026-10-06), so the renderer now paints it player blue
+  there and takes the hull's colour only from a palette hull.
+
 ## 1.8.0 (2026-10-06)
 
 - The editor update of 2026-10-06, read from the editor's own code and the game's export of its

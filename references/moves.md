@@ -45,7 +45,7 @@ barrels") skips this, and even then offer one idea in the recap.
    - **the look**: the tell, drawn; whether it moves is offered, not assumed (SKILL.md §2,
      "Motion is a question").
    Keep one or two good ideas in reserve as alternatives. Check the part budget (32 shapes,
-   32 barrels, 8 turrets, 96 pieces with the projectiles' parts) and the fire budget (Reload cap 0 for drawn projectiles, buildings
+   32 barrels, 9 turrets, 96 pieces with the projectiles' parts) and the fire budget (Reload cap 0 for drawn projectiles, buildings
    and figure drones) before promising.
 4. **Pitch it** (SKILL.md §3): name each chosen move in one plain line ("Lightsaber: a glowing
    blade that swings toward your cursor and cuts on left click"), then the alternatives in

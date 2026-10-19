@@ -179,8 +179,8 @@ import, so a pack cannot link into another pack's tree.
 
 ## Limits worth knowing
 
-- 32 body shapes, 32 barrels and 8 turrets per tank; the editor drops the rest without a
-  warning, and keeps only three collidable parts per tank and per projectile.
+- 32 body shapes, 32 barrels and 9 turrets per tank; the editor drops the rest without a
+  warning, and keeps only eight collidable parts per tank and three per projectile.
 - The game refuses a tank over its import budget (120 entities a second, 250 alive, and four
   more limits); the validator carries the editor's own copy of that check.
 - Turrets cannot be mounted on turrets, so a jointed chain that bends is impossible.

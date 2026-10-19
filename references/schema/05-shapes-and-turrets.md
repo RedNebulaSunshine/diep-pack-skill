@@ -108,9 +108,10 @@ within 0.3 units. All Confirmed unless marked.
 
 **Confirmed 2026-09-29 from the editor's import code** (first seen 2026-09-27, when the croc's
 42 body shapes showed as "32/32 parts" with everything after the 32nd missing in play, no error):
-per tank the editor keeps **32 body shapes, 32 barrels and 8 turrets**, per projectile **32
-parts, 32 barrels and 8 turrets**, and **16 projectiles**; anything past that is dropped on import
-without a word. A pack holds at most 512 tanks, 256 custom shapes and 512 bosses (§1b). The human packs agree: their
+per tank the editor keeps **32 body shapes, 32 barrels and 9 turrets**, per projectile **32
+parts, 32 barrels and 9 turrets**, and **16 projectiles**; anything past that is dropped on import
+without a word. The turret cap was 8 until the editor update of 2026-10-09 ("up to 9 auto turrets,
+up from 8"). A pack holds at most 512 tanks, 256 custom shapes and 512 bosses (§1b). The human packs agree: their
 largest tanks sit at exactly 32 shapes and 32 barrels, and the most turrets seen is 8.
 `validate_pack.py` errors past each limit; `compose.save()` warns. **Hitboxes**: 8 collidable
 shapes per tank, 3 per projectile (2026-10-06; §8).
