@@ -14,6 +14,11 @@ render, and tells you what to try in game.
 The pack that prompt produced is in [`examples/x-wing/`](examples/x-wing/): the design script,
 the `.diep-pack` it builds, and the PNG and SVG renders.
 
+> 🥉 **3rd place by vote.** *Halloween v0.12.1*, a 19-tank pack made with this skill, placed 3rd of 29
+> in the Diep.io Discord server's Tank Pack Creation Event (2026), with 47 votes. The organiser later
+> removed it from the results for the use of AI, a rule the announcement did not include at the time.
+> [The results, the source and the story](docs/tank-pack-event-2026.md).
+
 ## Get it
 
 No coding. The skill is one small zip that you hand to the AI you already use; after that you

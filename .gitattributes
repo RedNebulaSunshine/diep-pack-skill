@@ -1,0 +1,2 @@
+# Keep the repository docs out of the release zip (git archive): players upload only the skill.
+docs/ export-ignore
