@@ -62,7 +62,8 @@ fiddly part of the work, so that a person can spend their time on the ideas.
 
 - **Share** is the entry's part of all 809 votes. The bar compares each entry with 1st place.
 - **Entry logged** is the date the export records for the entry. The announcement gave the submission
-  deadline as 25 September 2026, 12:30 PM.
+  deadline as 25 September 2026, 12:30 PM. *Halloween v0.12.1* was logged on 1 October because the
+  maintainer asked for a late entry and the organisers granted it.
 - **Prize in the announcement** is what the announcement offered for the top three places.
 - Other entries are shown by their `pack_id` in the export. This repository does not name other
   players' packs.
