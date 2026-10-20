@@ -6,8 +6,9 @@ packs for the sandbox tank editor, and the server voted for their favourites.
 **Halloween v0.12.1**, a pack made with this skill, placed **3rd of 29**, with **47 of 809 votes**.
 
 - It was 2 votes behind 2nd place and 8 votes behind 1st.
-- Its description said: "The creator notes that AI was used to create and edit this diep-pack."
-  It was the only entry that said so. People voted for it knowing this.
+- In early October, after the pack was entered, the maintainer added a line to its description:
+  "The creator notes that AI was used to create and edit this diep-pack." It was the only entry
+  that said so.
 - On 19 October 2026 the organiser removed the entry from the results, because Diep events restrict
   the use of AI. The organiser confirmed that the event announcement did not say this at the time.
   The entry kept its XP and was given 100 Shinies as compensation.
