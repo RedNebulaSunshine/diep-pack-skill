@@ -187,6 +187,11 @@ editor writes `every`/`first`/`maxAlive`/`minPlayers` only when the pack set any
 spawns one at any time with `spawn_boss <name>`, and `set_boss [playerId] [name]` turns a player into
 one. The editor's Play button can play any boss.
 
+**In a Maze lobby** (played 2026-10-25, §13 item 24): the rotation and the spawn rings work, and walls
+stop a boss. A boss can spawn **inside** a wall, where players cannot hit it, and its bullets pass
+through walls, so a boss stuck in a wall shoots through it until an admin uses Kill Bosses. Bosses did
+not shoot the sandbox bots, with or without `onlyPlayers`.
+
 **Sizing against the stock bosses.** A boss plays at its record's `statLevels` (default 7 on
 everything, Health Regen 0) at `scale` 2–4 with `maxHealth` 3000–10000: the stock five are 3000 health
 at 1.55–2.09, Decade 10000 at 2.87. Health does not scale with size, so a scale-4 record at 3000 is a

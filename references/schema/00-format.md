@@ -146,6 +146,17 @@ writes `aboveBody: false`).
    whether one of the six raised stats does all the slowing on its own (a lower-priority check). Health Regen 12 heals a boss after a hit. A tank
    with nine turrets imports with all nine and all nine fire. A game export of 2026-10-18 writes
    `[7,7,7,7,7,7,7,0]` on all six stock bosses: the editor's "Stock levels" are the real ones.
+24. *(played 2026-10-25, a probe pack in a hosted Maze lobby)* **Custom bosses in a Maze lobby** (§1b).
+   A pack loads in a Maze lobby and its rotation runs. The `spawn.from`/`to` rings hold. Maze walls
+   stop a boss, and bosses at scale 2–3 fit the corridors. **A boss can spawn inside a maze wall.**
+   There, players cannot hit it, and it stays until an admin clears it (the admin panel's Kill Bosses
+   kills every boss). **A boss's bullets pass through maze walls.** At the stock levels every boss
+   moved very slowly, also when a player drove one with H, so the pace comes from the body (item 23),
+   not from the AI; the circling patrols were too slow to show a ring. **Bosses did not shoot the
+   sandbox bots**, with or without `ai.onlyPlayers`. A crasher shape (spot range 1500, speed 2)
+   chased a player through the corridors. The lobby has no team Maze; the admin sets each player's
+   and bot's team by hand. Still open: a fast boss's circling path in a maze; whether bots shoot
+   bosses; whether a player who takes over a boss stuck in a wall can drive it out.
 
 Resolved: Q1–9, Q11–19, Q21–26 of the original list, plus `preSpawn`, `burst`,
 `firesOnDeath`, `numBullets`, range-valued multipliers and `droneControllable` found along

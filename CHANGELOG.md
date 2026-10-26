@@ -5,6 +5,13 @@ Newest first. One entry per published version of the skill (`metadata.version` i
 lines to a user whose copy is older. Format: `## MAJOR.MINOR.PATCH (date)`, then a bullet per
 change.
 
+## 1.9.3 (2026-10-26)
+
+- Custom bosses in a Maze lobby, played (spec §13 item 24, §1b; recipes §34). The rotation and the
+  spawn rings work, and walls stop a boss. A boss can spawn inside a wall, where players cannot hit
+  it, and its bullets pass through walls: an admin must clear it with Kill Bosses. Bosses did not
+  shoot the sandbox bots. No code change.
+
 ## 1.9.2 (2026-10-18)
 
 - Which boss levels slow a boss, played (spec §13 item 23, §1b; recipes §34). Movement Speed 12

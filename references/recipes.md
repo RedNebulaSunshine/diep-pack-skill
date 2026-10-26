@@ -817,6 +817,11 @@ delivery. A boss from a **stock tank** needs no tank in the pack: `pack.boss("Oc
 one tank share a name and `spawn_boss` cannot tell them apart (play 2026-10-06); a variant boss
 gets its own tank copy.
 
+**In a Maze lobby** (played 2026-10-25, spec §13 item 24) a boss can spawn inside a wall, where
+players cannot hit it, and its bullets pass through walls. Tell the user before they plan a Maze
+lobby around rotation bosses: an admin must clear a stuck boss with Kill Bosses. Bosses did not shoot
+the sandbox bots, so bots on the players' side do not draw a boss's fire.
+
 **`minDamageMultiplier`** (4 on the stock records, 6 on Fallen Booster) is a floor on shot damage: at 6 a
 one-gun boss killed a maxed-regen Tank in 11 shots against 16 with the key absent (play 2026-10-06).
 Write it (`minDamageMultiplier=4`, as the game does) on a boss whose shots must bite.
